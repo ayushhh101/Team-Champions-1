@@ -1,0 +1,196 @@
+/* app/signup/Signup.module.css */
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #FFFBDE; /* Light yellow background */
+  font-family: sans-serif;
+  padding: 20px;
+  box-sizing: border-box; /* Include padding in element's total width and height */
+}
+
+.card {
+  background-color: white;
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 380px; /* Controls the overall width of the form card */
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.logoPlaceholder {
+  width: 120px;
+  height: 120px;
+  background-color: #E6F2F8; /* Light blueish-white */
+  border-radius: 60%;
+  margin: 0 auto 25px auto; /* Adjust margin below logo */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: #749BC2; /* Your dark blue */
+  font-size: 1em;
+}
+
+.title {
+  font-size: 1.8em;
+  color: #4682A9; /* Your dark blue */
+  margin-bottom: 5px; /* Reduced margin below main title */
+}
+
+.subtitle {
+  font-size: 0.9em;
+  color: #749BC2; /* Your dark blue */
+  margin-bottom: 30px; /* Space below subtitle */
+}
+
+.formGroup {
+  text-align: left;
+  margin-bottom: 18px; /* Spacing between form groups */
+}
+
+.label {
+  display: block;
+  font-size: 0.85em;
+  color: #749BC2; /* Your dark blue */
+  margin-bottom: 6px; /* Margin below label */
+  font-weight: 600;
+}
+
+.input {
+  width: 100%; /* Make input take full width of its parent */
+  padding: 10px 10px;
+  border: 1px solid #91C8E4; /* Your medium blue */
+  border-radius: 8px;
+  font-size: 0.95em;
+  color: #4682A9;
+  outline: none;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box; /* Include padding and border in element's total width */
+}
+
+.input::placeholder {
+  color: #A9D4ED; /* Lighter shade of blue for placeholder */
+}
+
+.input:focus {
+  border-color: #4682A9; /* Darker blue on focus */
+}
+
+.checkboxGroup {
+  display: flex;
+  align-items: center;
+  margin-bottom: 25px;
+  text-align: left; /* Align checkbox group text left */
+  justify-content: flex-start; /* Ensure items start from the left */
+}
+
+.checkbox {
+  margin-right: 8px;
+  accent-color: #00BFFF; /* Bright blue for checkbox accent */
+  transform: scale(1.1); /* Slightly enlarge checkbox */
+}
+
+.checkboxLabel {
+  font-size: 0.85em;
+  color: #749BC2; /* Your dark blue */
+}
+
+.signupButton,
+.loginWithPhoneButton,
+.googleButton {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  margin-bottom: 15px; /* Spacing between buttons */
+  box-sizing: border-box;
+  text-decoration: none; /* For button acting as link */
+  display: flex; /* For centering content with icon */
+  align-items: center;
+  justify-content: center;
+}
+
+.signupButton {
+  background-color: #00BFFF; /* Bright blue */
+  color: white;
+  border: none;
+}
+.signupButton:hover {
+  background-color: #00A3E0; /* Darker shade on hover */
+}
+
+.loginWithPhoneButton {
+  background-color: #00BFFF; /* Bright blue */
+  color: white;
+  border: none;
+}
+.loginWithPhoneButton:hover {
+  background-color: #00A3E0;
+}
+
+.orDivider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 15px 0; /* Vertical margin for 'or' divider */
+  color: #91C8E4; /* Your medium blue */
+  font-size: 0.9em;
+}
+
+.orDivider::before,
+.orDivider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #E0E0E0; /* Light gray line */
+}
+
+.orDivider:not(:empty)::before {
+  margin-right: .5em;
+}
+
+.orDivider:not(:empty)::after {
+  margin-left: .5em;
+}
+
+.googleButton {
+  background-color: white;
+  color: #4682A9; /* Your dark blue */
+  border: 1px solid #E0E0E0; /* Light gray border */
+  margin-bottom: 25px; /* Margin below Google button */
+}
+
+.googleButton:hover {
+  background-color: #F8F8F8;
+  border-color: #D0D0D0;
+}
+
+.googleIcon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  background: transparent;
+}
+
+.loginLink {
+  font-size: 0.85em;
+  color: #749BC2; /* Your dark blue */
+}
+
+.link {
+  color: #4682A9; /* Your dark blue */
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.link:hover {
+  color: #91C8E4; /* Your medium blue on hover */
+}
