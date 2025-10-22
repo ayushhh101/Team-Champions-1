@@ -1,0 +1,150 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "mobile": "+91-9876543210",
+      "email": "admin@hospital.com",
+      "password": "admin123",
+      "otp": "123456",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+       
+    },
+    {
+      "id": "2",
+      "mobile": "+91-9876543211",
+      "email": "john.smith@email.com",
+      "password": "patient123",
+      "otp": "234567",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+       
+    },
+    {
+      "id": "3",
+      "mobile": "+91-9876543212",
+      "email": "dr.williams@hospital.com",
+      "password": "doctor123",
+      "otp": "345678",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+       
+    },
+    {
+      "id": "4",
+      "mobile": "+91-9876543213",
+      "email": "emily.brown@email.com",
+      "password": "patient456",
+      "otp": "456789",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+    },
+    {
+      "id": "5",
+      "mobile": "+91-9876543214",
+      "email": "dr.davis@hospital.com",
+      "password": "doctor456",
+      "otp": "567890",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+      
+    },
+    {
+      "id": "6",
+      "mobile": "+91-9876543215",
+      "email": "robert.miller@email.com",
+      "password": "patient789",
+      "otp": "678901",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+       
+    },
+    {
+      "id": "7",
+      "mobile": "+91-9876543216",
+      "email": "dr.wilson@hospital.com",
+      "password": "doctor789",
+      "otp": "789012",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+      
+    },
+    {
+      "id": "8",
+      "mobile": "+91-9876543217",
+      "email": "lisa.taylor@email.com",
+      "password": "patient101",
+      "otp": "890123",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+      
+    },
+    {
+      "id": "9",
+      "mobile": "+91-9876543218",
+      "email": "dr.anderson@hospital.com",
+      "password": "doctor101",
+      "otp": "901234",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+      
+    },
+    {
+      "id": "10",
+      "mobile": "+91-9876543219",
+      "email": "james.thomas@email.com",
+      "password": "patient202",
+      "otp": "012345",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+    },
+    {
+      "id": "11",
+      "mobile": "+91-9876543220",
+      "email": "dr.martinez@hospital.com",
+      "password": "doctor202",
+      "otp": "135790",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+       
+    },
+    {
+      "id": "12",
+      "mobile": "+91-9876543221",
+      "email": "maria.garcia@email.com",
+      "password": "patient303",
+      "otp": "246801",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+      
+    },
+    {
+      "id": "13",
+      "mobile": "+91-9876543222",
+      "email": "dr.lee@hospital.com",
+      "password": "doctor303",
+      "otp": "357912",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+    },
+    {
+      "id": "14",
+      "mobile": "+91-9876543223",
+      "email": "david.clark@email.com",
+      "password": "patient404",
+      "otp": "468023",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+    },
+    {
+      "id": "15",
+      "mobile": "+91-9876543224",
+      "email": "dr.robinson@hospital.com",
+      "password": "doctor404",
+      "otp": "579134",
+      "otpExpiry": "2025-10-22T19:00:00Z",
+      "isVerified": true
+    }
+  ]
+ 
+}
