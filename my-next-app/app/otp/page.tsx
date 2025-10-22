@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronLeft, Delete } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import toast, { Toaster } from 'react-hot-toast'
 
-const colors = {
-  primary: '#80A1BA',    // Blue - for main text and icons
-  secondary: '#91C4C3',  // Teal - for accents and buttons
-  accent: '#B4DEBD',     // Green - for highlights
-  light: '#FFF7DD'       // Cream - for background
-}
+// Dummy OTP for testing
+const DUMMY_OTP = '1234'
 
 export default function OTPPage() {
+  const router = useRouter()
   const [otp, setOtp] = useState(['', '', '', ''])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [timeLeft, setTimeLeft] = useState(55)
@@ -21,6 +20,25 @@ export default function OTPPage() {
       return () => clearTimeout(timer)
     }
   }, [timeLeft])
+
+  // keyboard support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault()
+        handleNumberClick(e.key)
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault()
+        handleDelete()
+      } else if (e.key === 'Enter' && otp.join('').length === 4) {
+        e.preventDefault()
+        handleVerify()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [otp, currentIndex])
 
   const handleNumberClick = (number: string) => {
     if (currentIndex < 4) {
@@ -42,75 +60,138 @@ export default function OTPPage() {
 
   const handleVerify = () => {
     const otpCode = otp.join('')
-    console.log('OTP Code:', otpCode)
-    // Add your verification logic here
+    
+    if (otpCode === DUMMY_OTP) {
+      // save user data to localStorage
+      const userData = {
+        phone: '+91 111 ••••••99',
+        verified: true,
+        verifiedAt: new Date().toISOString(),
+        otp: otpCode
+      }
+      localStorage.setItem('userData', JSON.stringify(userData))
+      
+      toast.success('OTP Verified Successfully!', {
+        duration: 2000,
+        position: 'top-center',
+        style: {
+          background: '#34D399',
+          color: '#ffffff',
+          fontWeight: 'bold',
+          fontSize: '16px',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+        },
+        icon: '✓',
+      })
+      
+      // Redirect to home page after 2 seconds
+      setTimeout(() => {
+        router.push('/home')
+      }, 2000)
+    } else {
+      toast.error('Invalid OTP. Please try again.', {
+        duration: 3000,
+        position: 'top-center',
+        style: {
+          background: '#EF4444',
+          color: '#ffffff',
+          fontWeight: 'bold',
+          fontSize: '16px',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+        },
+        icon: '✗',
+      })
+      // Clear OTP on error
+      setTimeout(() => {
+        setOtp(['', '', '', ''])
+        setCurrentIndex(0)
+      }, 1500)
+    }
   }
 
   const handleResend = () => {
     setTimeLeft(55)
     setOtp(['', '', '', ''])
     setCurrentIndex(0)
-    console.log('Resending OTP...')
+    toast.success(`New OTP sent: ${DUMMY_OTP}`, {
+      duration: 4000,
+      position: 'top-center',
+      style: {
+        background: '#91C8E4',
+        color: '#ffffff',
+        fontWeight: 'bold',
+        fontSize: '16px',
+        padding: '16px 24px',
+        borderRadius: '12px',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+      },
+      icon: '📱',
+    })
   }
 
+  const isOtpComplete = otp.join('').length === 4
+
   return (
-    <div
-      className="min-h-screen flex flex-col font-sans antialiased relative overflow-hidden"
-      style={{ background: colors.light }}
-    >
+    <div className="min-h-screen flex flex-col font-sans antialiased relative overflow-hidden bg-[#FFFBDE]">
+      {/* Toast Container */}
+      <Toaster />
+
+      {/* Dummy OTP Display (for testing - remove in production) */}
+      <div className="absolute top-16 sm:top-20 left-4 sm:left-6 px-3 sm:px-4 py-2 rounded-lg shadow-md z-10 border-2 border-[#91C8E4] bg-[#91C8E4]/20">
+        <p className="text-[10px] sm:text-xs font-semibold text-[#4682A9]">
+          Test OTP: <span className="font-extrabold text-[#749BC2]">{DUMMY_OTP}</span>
+        </p>
+      </div>
+
       {/* Subtle background decoration */}
-      <div 
-        className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-10 -z-10"
-        style={{ background: colors.secondary }}
-      />
-      <div 
-        className="absolute bottom-0 left-0 w-80 h-80 rounded-full blur-3xl opacity-10 -z-10"
-        style={{ background: colors.accent }}
-      />
+      <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 rounded-full blur-3xl opacity-10 -z-10 bg-[#91C8E4]" />
+      <div className="absolute bottom-0 left-0 w-56 h-56 sm:w-80 sm:h-80 rounded-full blur-3xl opacity-10 -z-10 bg-[#749BC2]" />
 
       {/* Header */}
-      <div className="flex items-center px-6 py-6">
-        <ChevronLeft className="w-7 h-7 stroke-[2.5]" style={{ color: colors.primary }} />
-        <h1 
-          className="ml-3 text-xl font-bold tracking-tight" 
-          style={{ color: colors.primary }}
-        >
-          OTP Code Verification
+      <div className="flex items-center px-4 sm:px-6 py-4 sm:py-6">
+        <ChevronLeft 
+          onClick={() => router.back()}
+          className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5] text-[#4682A9] cursor-pointer hover:opacity-70 transition" 
+        />
+        <h1 className="ml-2 sm:ml-3 text-lg sm:text-xl font-bold tracking-tight text-[#4682A9]">
+          OTP Verification
         </h1>
       </div>
 
       {/* Content - Centered */}
-      <div className="flex-1 flex flex-col justify-center px-6 pb-16">
+      <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 pb-8 sm:pb-16">
         <div className="w-full max-w-md mx-auto">
+          {/* Title */}
+          <div className="text-center mb-4 sm:mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-[#4682A9]">
+              Verify Your Account
+            </h2>
+          </div>
+
           {/* Phone Number Display */}
-          <div className="text-center mb-12">
-            <p 
-              className="text-base font-semibold tracking-wide" 
-              style={{ color: colors.primary }}
-            >
-              Code has been sent to +91 111 ••••••99
+          <div className="text-center mb-6 sm:mb-4 px-2">
+            <p className="text-sm sm:text-base font-medium text-gray-600">
+              We&apos;ve sent a verification code to
+            </p>
+            <p className="text-sm sm:text-base font-bold text-[#749BC2] mt-1">
+              +91 111 ••••••99
             </p>
           </div>
 
           {/* OTP Input Boxes */}
-          <div className="flex justify-center gap-4 mb-8">
+          <div className="flex justify-center gap-2 sm:gap-4 mb-6 sm:mb-4">
             {otp.map((digit, idx) => (
               <div
                 key={idx}
-                className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-extrabold transition-all shadow-sm"
-                style={{
-                  background:
-                    idx === currentIndex
-                      ? `${colors.secondary}20`
-                      : digit
-                      ? '#ffffff'
-                      : '#ffffff',
-                  border:
-                    idx === currentIndex
-                      ? `3px solid ${colors.secondary}`
-                      : `2px solid ${colors.accent}`,
-                  color: colors.primary
-                }}
+                className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-2xl sm:text-3xl font-extrabold transition-all shadow-sm
+                  ${idx === currentIndex 
+                    ? 'bg-[#91C8E4]/20 border-[3px] border-[#91C8E4]' 
+                    : 'bg-white border-2 border-gray-200'
+                  } text-[#4682A9]`}
               >
                 {digit}
               </div>
@@ -118,19 +199,18 @@ export default function OTPPage() {
           </div>
 
           {/* Resend Timer */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-5">
             {timeLeft > 0 ? (
-              <p className="text-base font-semibold" style={{ color: colors.primary }}>
+              <p className="text-sm sm:text-base font-semibold text-gray-600">
                 Resend code in{' '}
-                <span className="font-extrabold" style={{ color: colors.secondary }}>
-                  {timeLeft} s
+                <span className="font-extrabold text-[#91C8E4]">
+                  {timeLeft}s
                 </span>
               </p>
             ) : (
               <button
                 onClick={handleResend}
-                className="text-base font-bold underline underline-offset-4 decoration-2 hover:opacity-80 transition"
-                style={{ color: colors.secondary }}
+                className="text-sm font-bold underline underline-offset-4 decoration-2 hover:opacity-80 transition text-[#91C8E4]"
               >
                 Resend Code
               </button>
@@ -140,68 +220,60 @@ export default function OTPPage() {
           {/* Verify Button */}
           <button
             onClick={handleVerify}
-            disabled={otp.join('').length < 4}
-            className="w-full py-4 rounded-xl font-extrabold text-lg tracking-wide mb-3 transition-all"
-            style={{
-              background:
-                otp.join('').length === 4
-                  ? colors.secondary
-                  : colors.accent,
-              color: otp.join('').length === 4 ? '#ffffff' : `${colors.primary}80`,
-              cursor: otp.join('').length === 4 ? 'pointer' : 'not-allowed',
-              letterSpacing: '0.05em',
-              opacity: otp.join('').length === 4 ? 1 : 0.6
-            }}
+            disabled={!isOtpComplete}
+            className={`w-full py-2 sm:py-3 rounded-xl font-bold text-base sm:text-lg tracking-wide mb-4 sm:mb-3 transition-all duration-300 shadow-lg
+              ${isOtpComplete 
+                ? 'bg-linear-to-r from-[#91C8E4] to-[#749BC2] hover:from-[#749BC2] hover:to-[#4682A9] text-white hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
           >
-            Verify
+            <span className="block sm:hidden">Verify OTP</span>
+            <span className="hidden sm:block">Verify OTP {isOtpComplete && '(Enter ↵)'}</span>
           </button>
 
           {/* Number Pad */}
-          <div 
-            className="rounded-3xl p-6"
-            style={{ background: `${colors.light}` }}
-          >
-            <div className="grid grid-cols-3 gap-y-6 gap-x-12">
+          <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-2 border-gray-100 bg-white">
+            <div className="grid grid-cols-3 gap-y-4 sm:gap-y-6 gap-x-8 sm:gap-x-12">
               {/* Number buttons */}
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((number) => (
                 <button
                   key={number}
                   onClick={() => handleNumberClick(number.toString())}
-                  className="w-full h-12 flex items-center justify-center text-3xl font-bold transition-all active:scale-95 hover:opacity-70"
-                  style={{ color: colors.primary }}
+                  className="w-full h-10 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl font-bold transition-all active:scale-95 hover:bg-gray-50 rounded-lg text-[#4682A9]"
                 >
                   {number}
                 </button>
               ))}
 
               {/* Bottom row: dot, 0, delete */}
-              <button
-                className="w-full h-12 flex items-center justify-center text-5xl font-black leading-none"
-                style={{ color: colors.accent }}
-              >
+              <button className="w-full h-10 sm:h-12 flex items-center justify-center text-4xl sm:text-5xl font-black leading-none text-[#91C8E4]">
                 •
               </button>
 
               <button
                 onClick={() => handleNumberClick('0')}
-                className="w-full h-12 flex items-center justify-center text-3xl font-bold transition-all active:scale-95 hover:opacity-70"
-                style={{ color: colors.primary }}
+                className="w-full h-10 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl font-bold transition-all active:scale-95 hover:bg-gray-50 rounded-lg text-[#4682A9]"
               >
                 0
               </button>
 
               <button
                 onClick={handleDelete}
-                className="w-full h-12 flex items-center justify-center transition-all active:scale-95 hover:opacity-70"
-                style={{ color: colors.primary }}
+                className="w-full h-10 sm:h-12 flex items-center justify-center transition-all active:scale-95 hover:bg-gray-50 rounded-lg text-[#4682A9]"
               >
-                <Delete className="w-7 h-7 stroke-[2.5]" />
+                <Delete className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
               </button>
             </div>
           </div>
+
+          {/* Help Text */}
+          <div className="text-center mt-6 sm:mt-8">
+            <p className="text-xs sm:text-sm text-gray-500">
+              Need help? <span className="font-semibold cursor-pointer hover:opacity-70 transition text-[#91C8E4]">Contact Support</span>
+            </p>
+          </div>
         </div>
       </div>
-
     </div>
   )
 }
