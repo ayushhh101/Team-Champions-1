@@ -3,15 +3,63 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [emailOrMobile, setEmailOrMobile] = useState(''); 
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);   
+  const router = useRouter();  
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Login with:', email, rememberMe);
-  };
+  const handleLogin = async (e: React.FormEvent) => {   
+  e.preventDefault();
+  
+  if (!emailOrMobile.trim()) {   
+    alert('Please enter your email or mobile number');
+    return;
+  }
+  
+  setIsLoading(true);   
+  
+  try {
+    const response = await fetch('/api/users');   
+    
+    if (!response.ok) {
+      throw new Error('Failed to load user data');
+    }
+    
+    const data = await response.json();
+    const users = data.users;
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const user = users.find((u: any) =>  
+      u.email.toLowerCase() === emailOrMobile.toLowerCase().trim() || 
+      u.mobile === emailOrMobile.trim()
+    );
+    
+    if (user) {
+      localStorage.setItem('loginEmailOrMobile', emailOrMobile);
+      localStorage.setItem('userId', user.id);
+      localStorage.setItem('userEmail', user.email);
+      localStorage.setItem('userMobile', user.mobile);
+      localStorage.setItem('userOTP', user.otp);
+      
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+      }
+      
+      router.push('/otp');  
+    } else {
+      alert('User not found. Please sign up first.');
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    alert('Unable to connect to server. Please try again later.');
+  } finally {
+    setIsLoading(false);  
+  }
+};
+
 
   const handleGoogleLogin = () => {
     console.log('Continue with Google');
@@ -107,10 +155,12 @@ export default function LoginPage() {
                   </div>
                   <input
                     type="text"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="emailOrMobile"
+                    value={emailOrMobile}
+                    onChange={(e) => setEmailOrMobile(e.target.value)} 
                     placeholder="Enter your email or mobile"
+                    disabled={isLoading} 
+                    required
                     className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-transparent placeholder:text-gray-400 placeholder:text-sm bg-white transition-all"
                   />
                 </div>
@@ -123,6 +173,7 @@ export default function LoginPage() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
+                     disabled={isLoading} 
                     className="w-4 h-4 rounded border-gray-300 text-[#4682A9] focus:ring-[#91C8E4] transition-colors"
                   />
                   <span className="text-sm font-medium text-gray-700 group-hover:text-[#4682A9] transition-colors">Remember Me</span>
@@ -133,12 +184,24 @@ export default function LoginPage() {
               </div>
 
               {/* Login Button */}
-              <button
+             <button
                 type="submit"
-                className="w-full bg-linear-to-r from-[#91C8E4] to-[#749BC2] hover:from-[#749BC2] hover:to-[#4682A9] text-white font-semibold py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Sign In
-              </button>
+                disabled={isLoading}  
+                className="w-full bg-linear-to-r from-[#91C8E4] to-[#749BC2] hover:from-[#749BC2] hover:to-[#4682A9] text-white font-semibold py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"  // ✅ ADDED CLASSES
+                >
+             {isLoading ? (   
+              <div className="flex items-center justify-center">
+             <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+             Verifying...
+          </div>
+          ) : (
+            'Continue with OTP'   
+          )}
+          </button>
+
             </form>
 
             {/* Divider */}
