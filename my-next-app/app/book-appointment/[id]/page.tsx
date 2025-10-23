@@ -126,7 +126,7 @@ export default function BookAppointmentPage() {
       <Toaster position="top-center" />
 
       {/* Header */}
-      <header className="bg-gradient-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
+      <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center">
             <button
@@ -146,7 +146,7 @@ export default function BookAppointmentPage() {
         <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 mb-6 border border-gray-100">
           <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             {/* Doctor Image */}
-            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-gradient-to-br from-[#91C8E4] to-[#4682A9] flex items-center justify-center text-white font-bold text-3xl sm:text-4xl shrink-0 shadow-md">
+            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-linear-to-br from-[#91C8E4] to-[#4682A9] flex items-center justify-center text-white font-bold text-3xl sm:text-4xl shrink-0 shadow-md">
               {doctor.image ? (
                 <Image
                   src={doctor.image}
@@ -173,7 +173,7 @@ export default function BookAppointmentPage() {
 
               {/* Stats */}
               <div className="grid grid-cols-4 gap-2 sm:gap-4">
-                <div className="text-center p-2 bg-gradient-to-br from-[#91C8E4]/10 to-[#91C8E4]/5 rounded-lg border border-[#91C8E4]/20">
+                <div className="text-center p-2 bg-linear-to-br from-[#91C8E4]/10 to-[#91C8E4]/5 rounded-lg border border-[#91C8E4]/20">
                   <div className="flex justify-center mb-1">
                     <User className="w-5 h-5 text-[#4682A9]" />
                   </div>
@@ -182,7 +182,7 @@ export default function BookAppointmentPage() {
                   </p>
                   <p className="text-[10px] sm:text-xs text-gray-600">patients</p>
                 </div>
-                <div className="text-center p-2 bg-gradient-to-br from-[#91C8E4]/10 to-[#91C8E4]/5 rounded-lg border border-[#91C8E4]/20">
+                <div className="text-center p-2 bg-linear-to-br from-[#91C8E4]/10 to-[#91C8E4]/5 rounded-lg border border-[#91C8E4]/20">
                   <div className="flex justify-center mb-1">
                     <Calendar className="w-5 h-5 text-[#4682A9]" />
                   </div>
@@ -191,7 +191,7 @@ export default function BookAppointmentPage() {
                   </p>
                   <p className="text-[10px] sm:text-xs text-gray-600">years exp.</p>
                 </div>
-                <div className="text-center p-2 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg border border-yellow-200">
+                <div className="text-center p-2 bg-linear-to-br from-yellow-50 to-amber-50 rounded-lg border border-yellow-200">
                   <div className="flex justify-center mb-1">
                     <svg className="w-5 h-5 text-yellow-500 fill-yellow-500" viewBox="0 0 24 24">
                       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -200,7 +200,7 @@ export default function BookAppointmentPage() {
                   <p className="text-xs sm:text-sm font-bold text-amber-600">{doctor.rating}</p>
                   <p className="text-[10px] sm:text-xs text-gray-600">rating</p>
                 </div>
-                <div className="text-center p-2 bg-gradient-to-br from-[#91C8E4]/10 to-[#91C8E4]/5 rounded-lg border border-[#91C8E4]/20">
+                <div className="text-center p-2 bg-linear-to-br from-[#91C8E4]/10 to-[#91C8E4]/5 rounded-lg border border-[#91C8E4]/20">
                   <div className="flex justify-center mb-1">
                     <svg className="w-5 h-5 text-[#4682A9]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -392,7 +392,7 @@ export default function BookAppointmentPage() {
               disabled={!selectedDate || !selectedTime || !patientName || !patientPhone}
               className={`px-8 py-4 rounded-xl font-bold text-white transition-all duration-300 ${
                 selectedDate && selectedTime && patientName && patientPhone
-                  ? 'bg-gradient-to-r from-[#91C8E4] to-[#4682A9] hover:shadow-xl hover:scale-105 active:scale-95'
+                  ? 'bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:shadow-xl hover:scale-105 active:scale-95'
                   : 'bg-gray-300 cursor-not-allowed opacity-60'
               }`}
             >

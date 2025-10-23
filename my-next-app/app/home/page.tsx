@@ -334,7 +334,8 @@ export default function HomePage() {
                             ₹{doctor.price}
                           </span>
                           <Link
-                            href={`/appointments?doctorId=${doctor.id}`} 
+                            // href={`/appointments?doctorId=${doctor.id}`} 
+                           href={`/book-appointment/${doctor.id}`}
                             className="px-3 py-1.5 sm:px-4 sm:py-2 bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white text-xs sm:text-sm font-semibold rounded-lg hover:shadow-md transition-all"
                           >
                             Book Now
