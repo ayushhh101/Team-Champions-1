@@ -5,7 +5,7 @@
       "mobile": "+91-9876543210",
       "email": "admin@hospital.com",
       "password": "admin123",
-      "otp": "123456",
+      "otp": "1234",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
        
@@ -15,7 +15,7 @@
       "mobile": "+91-9876543211",
       "email": "john.smith@email.com",
       "password": "patient123",
-      "otp": "234567",
+      "otp": "2345",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
        
@@ -25,7 +25,7 @@
       "mobile": "+91-9876543212",
       "email": "dr.williams@hospital.com",
       "password": "doctor123",
-      "otp": "345678",
+      "otp": "3456",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
        
@@ -35,7 +35,7 @@
       "mobile": "+91-9876543213",
       "email": "emily.brown@email.com",
       "password": "patient456",
-      "otp": "456789",
+      "otp": "4567",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
     },
@@ -44,7 +44,7 @@
       "mobile": "+91-9876543214",
       "email": "dr.davis@hospital.com",
       "password": "doctor456",
-      "otp": "567890",
+      "otp": "5678",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
       
@@ -54,7 +54,7 @@
       "mobile": "+91-9876543215",
       "email": "robert.miller@email.com",
       "password": "patient789",
-      "otp": "678901",
+      "otp": "6789",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
        
@@ -64,7 +64,7 @@
       "mobile": "+91-9876543216",
       "email": "dr.wilson@hospital.com",
       "password": "doctor789",
-      "otp": "789012",
+      "otp": "7890",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
       
@@ -74,7 +74,7 @@
       "mobile": "+91-9876543217",
       "email": "lisa.taylor@email.com",
       "password": "patient101",
-      "otp": "890123",
+      "otp": "8901",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
       
@@ -84,7 +84,7 @@
       "mobile": "+91-9876543218",
       "email": "dr.anderson@hospital.com",
       "password": "doctor101",
-      "otp": "901234",
+      "otp": "9012",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
       
@@ -94,7 +94,7 @@
       "mobile": "+91-9876543219",
       "email": "james.thomas@email.com",
       "password": "patient202",
-      "otp": "012345",
+      "otp": "0123",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
     },
@@ -103,7 +103,7 @@
       "mobile": "+91-9876543220",
       "email": "dr.martinez@hospital.com",
       "password": "doctor202",
-      "otp": "135790",
+      "otp": "1357",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
        
@@ -113,7 +113,7 @@
       "mobile": "+91-9876543221",
       "email": "maria.garcia@email.com",
       "password": "patient303",
-      "otp": "246801",
+      "otp": "2468",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
       
@@ -123,7 +123,7 @@
       "mobile": "+91-9876543222",
       "email": "dr.lee@hospital.com",
       "password": "doctor303",
-      "otp": "357912",
+      "otp": "3579",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
     },
@@ -132,7 +132,7 @@
       "mobile": "+91-9876543223",
       "email": "david.clark@email.com",
       "password": "patient404",
-      "otp": "468023",
+      "otp": "4680",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
     },
@@ -141,9 +141,111 @@
       "mobile": "+91-9876543224",
       "email": "dr.robinson@hospital.com",
       "password": "doctor404",
-      "otp": "579134",
+      "otp": "5791",
       "otpExpiry": "2025-10-22T19:00:00Z",
       "isVerified": true
+    }
+  ],
+  "doctors": [
+    {
+      "id": "d1",
+      "name": "Dr. Priya Malhotra",
+      "speciality": "Orthopedic",
+      "location": "Delhi",
+      "price": 1200,
+      "rating": 4.7,
+      "experience": 16,
+      "availableDates": ["2025-10-28", "2025-10-26", "2025-10-29"],
+      "availableTimes": ["14:30", "10:30", "16:00"],
+      "image": "/images/doctor02.jpg"
+    },
+    {
+      "id": "d2",
+      "name": "Dr. Vikram Rao",
+      "speciality": "Cardiologist",
+      "location": "Chennai",
+      "price": 1850,
+      "rating": 4.5,
+      "experience": 12,
+      "availableDates": ["2025-10-29", "2025-10-27", "2025-10-30"],
+      "availableTimes": ["11:00", "15:30", "09:30"],
+      "image": "/images/doctor01.jpg"
+    },
+    {
+      "id": "d3",
+      "name": "Dr. Kavita Desai",
+      "speciality": "Psychiatrist",
+      "location": "Pune",
+      "price": 1300,
+      "rating": 4.9,
+      "experience": 22,
+      "availableDates": ["2025-10-28", "2025-10-26", "2025-10-31"],
+      "availableTimes": ["10:00", "14:30", "16:00"],
+      "image": "/images/doctor03.jpg"
+    },
+    {
+      "id": "8c2f",
+      "name": "Dr. Sameer Kapoor",
+      "email": "sameer.kapoor@clinic.com",
+      "password": "Doctor@5821",
+      "phone": "+919283746510",
+      "qualification": "MD (Internal Medicine)",
+      "speciality": "Pulmonology",
+      "location": "Karnataka",
+      "experience": "8",
+      "availableDates": ["2025-10-25", "2025-11-01", "2025-11-08"],
+      "availableTimes": ["10:00", "10:00", "14:00"],
+      "price": "750",
+      "slotTypes": [
+        {
+          "type": "wave",
+          "expected": 20,
+          "booked": 0,
+          "max": 1
+        },
+        {
+          "type": "stream",
+          "expected": 18,
+          "booked": 0,
+          "max": 1
+        }
+      ],
+      "appointmentSlots": [
+        {
+          "id": "slot_1754024050047_xyz123",
+          "date": "2025-10-25",
+          "startTime": "10:00",
+          "endTime": "18:00",
+          "slotDuration": 25,
+          "totalSlots": 20,
+          "bookedSlots": [],
+          "slotType": "wave",
+          "maxPatients": 1,
+          "isActive": true,
+          "createdAt": "2025-10-15T04:30:10.047Z",
+          "updatedAt": "2025-10-20T07:00:35.646Z",
+          "dayOfWeek": "Saturday",
+          "availableSlots": [
+            "10:00", "10:25", "10:50", "11:15", "11:40", "12:05",
+            "12:30", "12:55", "13:20", "13:45", "14:10", "14:35",
+            "15:00", "15:25", "15:50", "16:15", "16:40", "17:05",
+            "17:30", "17:55"
+          ]
+        }
+      ],
+      "rating": 4.2,
+      "reviewCount": 6,
+      "reviews": [
+        {
+          "id": "1755064627213",
+          "userId": "a92c",
+          "appointmentId": "ap01",
+          "rating": 5,
+          "review": "Dr. Kapoor provided excellent care and took time to explain everything thoroughly. The clinic was well-maintained and the staff was courteous.",
+          "createdAt": "2025-10-18T05:57:07.213Z",
+          "patientName": "Patient-a92c"
+        }
+      ]
     }
   ]
  

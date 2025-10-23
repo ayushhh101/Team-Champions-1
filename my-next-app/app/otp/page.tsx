@@ -4,9 +4,7 @@ import { useState, useEffect } from 'react'
 import { ChevronLeft, Delete } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
-
-// Dummy OTP for testing
-const DUMMY_OTP = '1234'
+import userData from '../data/data.json'
 
 export default function OTPPage() {
   const router = useRouter()
@@ -61,35 +59,66 @@ export default function OTPPage() {
   const handleVerify = () => {
     const otpCode = otp.join('')
     
-    if (otpCode === DUMMY_OTP) {
-      // save user data to localStorage
-      const userData = {
-        phone: '+91 111 ••••••99',
-        verified: true,
-        verifiedAt: new Date().toISOString(),
-        otp: otpCode
+    // Find user with matching OTP
+    const validUser = userData.users.find(user => user.otp === otpCode)
+    
+    if (validUser) {
+      // Check if OTP is not expired
+      const now = new Date()
+      const otpExpiry = new Date(validUser.otpExpiry)
+      
+      if (now <= otpExpiry) {
+        // save user data to localStorage
+        const userInfo = {
+          id: validUser.id,
+          phone: validUser.mobile,
+          email: validUser.email,
+          verified: true,
+          verifiedAt: new Date().toISOString(),
+          otp: otpCode
+        }
+        localStorage.setItem('userData', JSON.stringify(userInfo))
+        
+        toast.success('OTP Verified Successfully!', {
+          duration: 2000,
+          position: 'top-center',
+          style: {
+            background: '#34D399',
+            color: '#ffffff',
+            fontWeight: 'bold',
+            fontSize: '16px',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+          },
+          icon: '✓',
+        })
+        
+        // Redirect to home page after 2 seconds
+        setTimeout(() => {
+          router.push('/home')
+        }, 2000)
+      } else {
+        toast.error('OTP has expired. Please request a new one.', {
+          duration: 3000,
+          position: 'top-center',
+          style: {
+            background: '#EF4444',
+            color: '#ffffff',
+            fontWeight: 'bold',
+            fontSize: '16px',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+          },
+          icon: '⏰',
+        })
+        // Clear OTP on error
+        setTimeout(() => {
+          setOtp(['', '', '', ''])
+          setCurrentIndex(0)
+        }, 1500)
       }
-      localStorage.setItem('userData', JSON.stringify(userData))
-      
-      toast.success('OTP Verified Successfully!', {
-        duration: 2000,
-        position: 'top-center',
-        style: {
-          background: '#34D399',
-          color: '#ffffff',
-          fontWeight: 'bold',
-          fontSize: '16px',
-          padding: '16px 24px',
-          borderRadius: '12px',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
-        },
-        icon: '✓',
-      })
-      
-      // Redirect to home page after 2 seconds
-      setTimeout(() => {
-        router.push('/home')
-      }, 2000)
     } else {
       toast.error('Invalid OTP. Please try again.', {
         duration: 3000,
@@ -117,7 +146,11 @@ export default function OTPPage() {
     setTimeLeft(55)
     setOtp(['', '', '', ''])
     setCurrentIndex(0)
-    toast.success(`New OTP sent: ${DUMMY_OTP}`, {
+    
+    // Get a random valid OTP from the data for demonstration
+    const randomUser = userData.users[Math.floor(Math.random() * userData.users.length)]
+    
+    toast.success(`New OTP sent: ${randomUser.otp}`, {
       duration: 4000,
       position: 'top-center',
       style: {
@@ -140,11 +173,18 @@ export default function OTPPage() {
       {/* Toast Container */}
       <Toaster />
 
-      {/* Dummy OTP Display (for testing - remove in production) */}
-      <div className="absolute top-16 sm:top-20 left-4 sm:left-6 px-3 sm:px-4 py-2 rounded-lg shadow-md z-10 border-2 border-[#91C8E4] bg-[#91C8E4]/20">
-        <p className="text-[10px] sm:text-xs font-semibold text-[#4682A9]">
-          Test OTP: <span className="font-extrabold text-[#749BC2]">{DUMMY_OTP}</span>
+      {/* Valid OTPs Display (for testing - remove in production) */}
+      <div className="absolute top-16 sm:top-20 left-4 sm:left-6 px-3 sm:px-4 py-2 rounded-lg shadow-md z-10 border-2 border-[#91C8E4] bg-[#91C8E4]/20 max-w-48">
+        <p className="text-[10px] sm:text-xs font-semibold text-[#4682A9] mb-1">
+          Valid OTPs:
         </p>
+        <div className="grid grid-cols-3 gap-1">
+          {userData.users.slice(0, 6).map((user) => (
+            <span key={user.id} className="font-extrabold text-[#749BC2] text-[9px] sm:text-xs">
+              {user.otp}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Subtle background decoration */}
@@ -178,7 +218,7 @@ export default function OTPPage() {
               We&apos;ve sent a verification code to
             </p>
             <p className="text-sm sm:text-base font-bold text-[#749BC2] mt-1">
-              +91 111 ••••••99
+              +91-9876••••10
             </p>
           </div>
 
