@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useState, useEffect } from 'react'
 import { ChevronLeft, Delete } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -11,6 +12,7 @@ export default function OTPPage() {
   const [otp, setOtp] = useState(['', '', '', ''])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [timeLeft, setTimeLeft] = useState(55)
+  const inputRefs = Array(4).fill(null).map(() => React.createRef<HTMLInputElement>())
 
   useEffect(() => {
     if (timeLeft > 0) {
@@ -22,6 +24,7 @@ export default function OTPPage() {
   // keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement && (document.activeElement as HTMLElement).tagName === 'INPUT') return;
       if (/^[0-9]$/.test(e.key)) {
         e.preventDefault()
         handleNumberClick(e.key)
@@ -33,7 +36,6 @@ export default function OTPPage() {
         handleVerify()
       }
     }
-
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [otp, currentIndex])
@@ -43,7 +45,12 @@ export default function OTPPage() {
       const newOtp = [...otp]
       newOtp[currentIndex] = number
       setOtp(newOtp)
-      setCurrentIndex(currentIndex + 1)
+      if (currentIndex < 3) {
+        setCurrentIndex(currentIndex + 1)
+        setTimeout(() => {
+          inputRefs[currentIndex + 1].current?.focus()
+        }, 10)
+      }
     }
   }
 
@@ -53,6 +60,9 @@ export default function OTPPage() {
       newOtp[currentIndex - 1] = ''
       setOtp(newOtp)
       setCurrentIndex(currentIndex - 1)
+      setTimeout(() => {
+        inputRefs[currentIndex - 1].current?.focus()
+      }, 10)
     }
   }
 
@@ -166,7 +176,7 @@ export default function OTPPage() {
     })
   }
 
-  const isOtpComplete = otp.join('').length === 4
+  const isOtpComplete = otp.every(d => d.length === 1)
 
   return (
     <div className="min-h-screen flex flex-col font-sans antialiased relative overflow-hidden bg-[#FFFBDE]">
@@ -222,19 +232,28 @@ export default function OTPPage() {
             </p>
           </div>
 
-          {/* OTP Input Boxes */}
+          {/* OTP Input Boxes (now focusable for accessibility) */}
           <div className="flex justify-center gap-2 sm:gap-4 mb-6 sm:mb-4">
             {otp.map((digit, idx) => (
-              <div
+              <input
                 key={idx}
-                className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-2xl sm:text-3xl font-extrabold transition-all shadow-sm
+                ref={inputRefs[idx]}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onFocus={() => setCurrentIndex(idx)}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 1)
+                  if (val) handleNumberClick(val)
+                }}
+                className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl text-center text-2xl sm:text-3xl font-extrabold transition-all shadow-sm outline-none
                   ${idx === currentIndex 
                     ? 'bg-[#91C8E4]/20 border-[3px] border-[#91C8E4]' 
                     : 'bg-white border-2 border-gray-200'
                   } text-[#4682A9]`}
-              >
-                {digit}
-              </div>
+                aria-label={`OTP digit ${idx + 1}`}
+              />
             ))}
           </div>
 
