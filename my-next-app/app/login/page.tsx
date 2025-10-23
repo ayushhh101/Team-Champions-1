@@ -66,7 +66,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFBDE] flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-[#f2f1ef] flex flex-col lg:flex-row">
       {/* Left Side  */}
       <div className="hidden lg:block lg:w-[60%] relative overflow-hidden">
         <Image
@@ -79,7 +79,7 @@ export default function LoginPage() {
 
         <div className="absolute inset-0 bg-linear-to-br from-[#91C8E4]/40 via-[#749BC2]/30 to-[#4682A9]/40"></div>
         {/* Text Content Overlay */}
-        <div className="absolute inset-0 z-10 flex flex-col justify-end pb-16 px-12 text-white">
+        <div className="absolute inset-0 z-10 flex flex-col justify-end pb-16 px-12 text-black">
           {/* Top Badge */}
         
           {/* Main Content */}
@@ -94,22 +94,22 @@ export default function LoginPage() {
               </h1>
             </div>
             {/* Subheading */}
-            <p className="text-2xl font-light drop-shadow-lg leading-relaxed">
+            <p className="text-2xl font-light drop-shadow-lg leading-relaxed  text-yellow-100">
               Book appointments with top doctors in seconds. Your health journey starts here.
             </p>
             {/* Stats Row */}
             <div className="flex gap-8 pt-6 border-t border-white/30">
               <div>
                 <div className="text-3xl font-bold">10K+</div>
-                <div className="text-sm text-white/80">Happy Patients</div>
+                <div className="text-sm text-black/80">Happy Patients</div>
               </div>
               <div>
                 <div className="text-3xl font-bold">500+</div>
-                <div className="text-sm text-white/80">Expert Doctors</div>
+                <div className="text-sm text-black/80">Expert Doctors</div>
               </div>
               <div>
                 <div className="text-3xl font-bold">24/7</div>
-                <div className="text-sm text-white/80">Support</div>
+                <div className="text-sm text-black/80">Support</div>
               </div>
             </div>
           </div>
@@ -161,8 +161,7 @@ export default function LoginPage() {
                     placeholder="Enter your email or mobile"
                     disabled={isLoading} 
                     required
-                    className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-transparent placeholder:text-gray-400 placeholder:text-sm bg-white transition-all"
-                  />
+                    className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-transparent placeholder:text-gray-400 placeholder:text-sm bg-white text-gray-900 transition-all"/>                                                                                                      
                 </div>
               </div>
 
