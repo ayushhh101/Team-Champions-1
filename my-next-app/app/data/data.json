@@ -16,7 +16,7 @@
       "email": "john.smith@email.com",
       "password": "patient123",
       "otp": "2345",
-      "otpExpiry": "2025-10-22T19:00:00Z",
+      "otpExpiry": "2025-12-25T19:00:00Z",
       "isVerified": true,
       "location": "Delhi, India"
     },
@@ -26,7 +26,7 @@
       "email": "dr.williams@hospital.com",
       "password": "doctor123",
       "otp": "3456",
-      "otpExpiry": "2025-10-22T19:00:00Z",
+      "otpExpiry": "2025-12-25T19:00:00Z",
       "location": "Mumbai, Maharashtra",
       "isVerified": true
     },
@@ -36,7 +36,7 @@
       "email": "emily.brown@email.com",
       "password": "patient456",
       "otp": "4567",
-      "otpExpiry": "2025-10-22T19:00:00Z",
+      "otpExpiry": "2025-12-25T19:00:00Z",
       "location": "Bangalore, Karnataka",
       "isVerified": true
     },
@@ -46,7 +46,7 @@
       "email": "dr.davis@hospital.com",
       "password": "doctor456",
       "otp": "5678",
-      "otpExpiry": "2025-10-22T19:00:00Z",
+      "otpExpiry": "2025-12-22T19:00:00Z",
       "location": "Chennai, Tamil Nadu",
       "isVerified": true
     },
