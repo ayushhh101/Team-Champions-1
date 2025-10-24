@@ -12,7 +12,26 @@ export default function OTPPage() {
   const [otp, setOtp] = useState(['', '', '', ''])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [timeLeft, setTimeLeft] = useState(55)
+  const [userDetails, setUserDetails] = useState<{mobile: string, email: string, expectedOtp: string} | null>(null)
   const inputRefs = Array(4).fill(null).map(() => React.createRef<HTMLInputElement>())
+
+  // Load user details from localStorage on component mount
+  useEffect(() => {
+    const userMobile = localStorage.getItem('userMobile')
+    const userEmail = localStorage.getItem('userEmail')
+    const userOTP = localStorage.getItem('userOTP')
+    
+    if (userMobile && userEmail && userOTP) {
+      setUserDetails({
+        mobile: userMobile,
+        email: userEmail,
+        expectedOtp: userOTP
+      })
+    } else {
+      // If no user data found, redirect to login
+      router.push('/login')
+    }
+  }, [router])
 
   useEffect(() => {
     if (timeLeft > 0) {
@@ -69,6 +88,12 @@ export default function OTPPage() {
   const handleVerify = () => {
     const otpCode = otp.join('')
     
+    if (!userDetails) {
+      toast.error('User session not found. Please login again.')
+      router.push('/login')
+      return
+    }
+    
     // Find user with matching OTP
     const validUser = userData.users.find(user => user.otp === otpCode)
     
@@ -78,36 +103,58 @@ export default function OTPPage() {
       const otpExpiry = new Date(validUser.otpExpiry)
       
       if (now <= otpExpiry) {
-        // save user data to localStorage
-        const userInfo = {
-          id: validUser.id,
-          phone: validUser.mobile,
-          email: validUser.email,
-          verified: true,
-          verifiedAt: new Date().toISOString(),
-          otp: otpCode
+        // Verify that the entered OTP matches the expected OTP for this user
+        if (otpCode === userDetails.expectedOtp) {
+          // save user data to localStorage
+          const userInfo = {
+            id: validUser.id,
+            phone: validUser.mobile,
+            email: validUser.email,
+            verified: true,
+            verifiedAt: new Date().toISOString(),
+            otp: otpCode
+          }
+          localStorage.setItem('userData', JSON.stringify(userInfo))
+          
+          toast.success('OTP Verified Successfully!', {
+            duration: 2000,
+            position: 'top-center',
+            style: {
+              background: '#34D399',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              padding: '16px 24px',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+            },
+            icon: '✓',
+          })
+          
+          // Redirect to home page after 2 seconds
+          setTimeout(() => {
+            router.push('/home')
+          }, 2000)
+        } else {
+          toast.error('Invalid OTP for this user. Please try again.', {
+            duration: 3000,
+            position: 'top-center',
+            style: {
+              background: '#EF4444',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              padding: '16px 24px',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+            },
+            icon: '✗',
+          })
+          setTimeout(() => {
+            setOtp(['', '', '', ''])
+            setCurrentIndex(0)
+          }, 1500)
         }
-        localStorage.setItem('userData', JSON.stringify(userInfo))
-        
-        toast.success('OTP Verified Successfully!', {
-          duration: 2000,
-          position: 'top-center',
-          style: {
-            background: '#34D399',
-            color: '#ffffff',
-            fontWeight: 'bold',
-            fontSize: '16px',
-            padding: '16px 24px',
-            borderRadius: '12px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
-          },
-          icon: '✓',
-        })
-        
-        // Redirect to home page after 2 seconds
-        setTimeout(() => {
-          router.push('/home')
-        }, 2000)
       } else {
         toast.error('OTP has expired. Please request a new one.', {
           duration: 3000,
@@ -123,7 +170,6 @@ export default function OTPPage() {
           },
           icon: '⏰',
         })
-        // Clear OTP on error
         setTimeout(() => {
           setOtp(['', '', '', ''])
           setCurrentIndex(0)
@@ -144,7 +190,6 @@ export default function OTPPage() {
         },
         icon: '✗',
       })
-      // Clear OTP on error
       setTimeout(() => {
         setOtp(['', '', '', ''])
         setCurrentIndex(0)
@@ -157,119 +202,130 @@ export default function OTPPage() {
     setOtp(['', '', '', ''])
     setCurrentIndex(0)
     
-    // Get a random valid OTP from the data for demonstration
-    const randomUser = userData.users[Math.floor(Math.random() * userData.users.length)]
-    
-    toast.success(`New OTP sent: ${randomUser.otp}`, {
-      duration: 4000,
-      position: 'top-center',
-      style: {
-        background: '#91C8E4',
-        color: '#ffffff',
-        fontWeight: 'bold',
-        fontSize: '16px',
-        padding: '16px 24px',
-        borderRadius: '12px',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
-      },
-      icon: '📱',
-    })
+    if (userDetails) {
+      toast.success(`New OTP sent to ${userDetails.mobile}`, {
+        duration: 4000,
+        position: 'top-center',
+        style: {
+          background: '#91C8E4',
+          color: '#ffffff',
+          fontWeight: 'bold',
+          fontSize: '16px',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+        },
+        icon: '📱',
+      })
+    }
+  }
+
+  const formatPhoneNumber = (phone: string) => {
+    if (phone && phone.length >= 10) {
+      const last4 = phone.slice(-4)
+      const countryCode = phone.slice(0, 3)
+      return `${countryCode}-••••${last4}`
+    }
+    return phone
   }
 
   const isOtpComplete = otp.every(d => d.length === 1)
 
+  // Show loading while user details are being loaded
+  if (!userDetails) {
+    return (
+      <div className="min-h-screen bg-[#f2f1ef] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4682A9]"></div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen flex flex-col font-sans antialiased relative overflow-hidden bg-[#FFFBDE]">
-      {/* Toast Container */}
+    <div className="min-h-screen bg-[#f2f1ef] flex flex-col">
       <Toaster />
-
-      {/* Valid OTPs Display (for testing - remove in production) */}
-      <div className="absolute top-16 sm:top-20 left-4 sm:left-6 px-3 sm:px-4 py-2 rounded-lg shadow-md z-10 border-2 border-[#91C8E4] bg-[#91C8E4]/20 max-w-48">
-        <p className="text-[10px] sm:text-xs font-semibold text-[#4682A9] mb-1">
-          Valid OTPs:
-        </p>
-        <div className="grid grid-cols-3 gap-1">
-          {userData.users.slice(0, 6).map((user) => (
-            <span key={user.id} className="font-extrabold text-[#749BC2] text-[9px] sm:text-xs">
-              {user.otp}
-            </span>
-          ))}
+      
+      {/* Header - Consistent with other pages */}
+      <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
+        <div className="px-4 sm:px-6 py-4">
+          <div className="flex items-center">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <h1 className="ml-3 text-lg sm:text-xl font-bold">OTP Verification</h1>
+          </div>
         </div>
-      </div>
+      </header>
+      
+      <div className="flex-1 flex items-center justify-center px-6 py-8 lg:px-12">
+        <div className="w-full max-w-md">
 
-      {/* Subtle background decoration */}
-      <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 rounded-full blur-3xl opacity-10 -z-10 bg-[#91C8E4]" />
-      <div className="absolute bottom-0 left-0 w-56 h-56 sm:w-80 sm:h-80 rounded-full blur-3xl opacity-10 -z-10 bg-[#749BC2]" />
+        {/* Logo Section */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-linear-to-br from-[#F5F5F5] to-white rounded-3xl px-12 py-10 shadow-xl border border-gray-100">
+            <div className="w-20 h-20 bg-linear-to-br from-[#91C8E4] to-[#4682A9] rounded-2xl flex items-center justify-center">
+              <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+          </div>
+        </div>
 
-      {/* Header */}
-      <div className="flex items-center px-4 sm:px-6 py-4 sm:py-6">
-        <ChevronLeft 
-          onClick={() => router.back()}
-          className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5] text-[#4682A9] cursor-pointer hover:opacity-70 transition" 
-        />
-        <h1 className="ml-2 sm:ml-3 text-lg sm:text-xl font-bold tracking-tight text-[#4682A9]">
-          OTP Verification
-        </h1>
-      </div>
-
-      {/* Content - Centered */}
-      <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 pb-8 sm:pb-16">
-        <div className="w-full max-w-md mx-auto">
-          {/* Title */}
-          <div className="text-center mb-4 sm:mb-6">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-[#4682A9]">
-              Verify Your Account
-            </h2>
+        {/* Form Container */}
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 mb-6">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-[#4682A9] mb-2">Verify Your Account</h2>
+            <p className="text-gray-600 mb-4">We've sent a verification code to</p>
+            <p className="text-[#749BC2] font-bold">{formatPhoneNumber(userDetails.mobile)}</p>
+            <p className="text-gray-500 text-sm mt-1">{userDetails.email}</p>
           </div>
 
-          {/* Phone Number Display */}
-          <div className="text-center mb-6 sm:mb-4 px-2">
-            <p className="text-sm sm:text-base font-medium text-gray-600">
-              We&apos;ve sent a verification code to
-            </p>
-            <p className="text-sm sm:text-base font-bold text-[#749BC2] mt-1">
-              +91-9876••••10
-            </p>
+          {/* OTP Input */}
+          <div className="mb-8">
+            <label className="block text-sm font-semibold text-gray-800 mb-4 text-center">
+              Enter 4-digit OTP
+            </label>
+            <div className="flex justify-center gap-4 mb-6">
+              {otp.map((digit, idx) => (
+                <input
+                  key={idx}
+                  ref={inputRefs[idx]}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onFocus={() => setCurrentIndex(idx)}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 1)
+                    if (val) handleNumberClick(val)
+                  }}
+                  className={`w-16 h-16 text-center text-2xl font-bold border-2 rounded-xl transition-all outline-none
+                    ${idx === currentIndex 
+                      ? 'border-[#4682A9] bg-[#91C8E4]/10 shadow-lg ring-2 ring-[#91C8E4]/20' 
+                      : 'border-gray-200 bg-white hover:border-[#91C8E4]'
+                    } text-[#4682A9]`}
+                  aria-label={`OTP digit ${idx + 1}`}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* OTP Input Boxes (now focusable for accessibility) */}
-          <div className="flex justify-center gap-2 sm:gap-4 mb-6 sm:mb-4">
-            {otp.map((digit, idx) => (
-              <input
-                key={idx}
-                ref={inputRefs[idx]}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onFocus={() => setCurrentIndex(idx)}
-                onChange={e => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 1)
-                  if (val) handleNumberClick(val)
-                }}
-                className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl text-center text-2xl sm:text-3xl font-extrabold transition-all shadow-sm outline-none
-                  ${idx === currentIndex 
-                    ? 'bg-[#91C8E4]/20 border-[3px] border-[#91C8E4]' 
-                    : 'bg-white border-2 border-gray-200'
-                  } text-[#4682A9]`}
-                aria-label={`OTP digit ${idx + 1}`}
-              />
-            ))}
-          </div>
-
-          {/* Resend Timer */}
-          <div className="text-center mb-6 sm:mb-5">
+          {/* Timer and Resend */}
+          <div className="text-center mb-6">
             {timeLeft > 0 ? (
-              <p className="text-sm sm:text-base font-semibold text-gray-600">
+              <p className="text-sm font-semibold text-gray-600">
                 Resend code in{' '}
-                <span className="font-extrabold text-[#91C8E4]">
+                <span className="font-bold text-[#4682A9]">
                   {timeLeft}s
                 </span>
               </p>
             ) : (
               <button
                 onClick={handleResend}
-                className="text-sm font-bold underline underline-offset-4 decoration-2 hover:opacity-80 transition text-[#91C8E4]"
+                className="text-sm font-bold text-[#4682A9] hover:text-[#749BC2] transition-colors underline underline-offset-4"
               >
                 Resend Code
               </button>
@@ -280,57 +336,67 @@ export default function OTPPage() {
           <button
             onClick={handleVerify}
             disabled={!isOtpComplete}
-            className={`w-full py-2 sm:py-3 rounded-xl font-bold text-base sm:text-lg tracking-wide mb-4 sm:mb-3 transition-all duration-300 shadow-lg
+            className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg mb-4
               ${isOtpComplete 
-                ? 'bg-linear-to-r from-[#91C8E4] to-[#749BC2] hover:from-[#749BC2] hover:to-[#4682A9] text-white hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]' 
+                ? 'bg-linear-to-r from-[#91C8E4] to-[#749BC2] hover:from-[#749BC2] hover:to-[#4682A9] text-white hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]' 
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
           >
-            <span className="block sm:hidden">Verify OTP</span>
-            <span className="hidden sm:block">Verify OTP {isOtpComplete && '(Enter ↵)'}</span>
+            {isOtpComplete ? 'Verify OTP' : 'Enter OTP to continue'}
           </button>
 
-          {/* Number Pad */}
-          <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-2 border-gray-100 bg-white">
-            <div className="grid grid-cols-3 gap-y-4 sm:gap-y-6 gap-x-8 sm:gap-x-12">
-              {/* Number buttons */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((number) => (
-                <button
-                  key={number}
-                  onClick={() => handleNumberClick(number.toString())}
-                  className="w-full h-10 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl font-bold transition-all active:scale-95 hover:bg-gray-50 rounded-lg text-[#4682A9]"
-                >
-                  {number}
-                </button>
-              ))}
-
-              {/* Bottom row: dot, 0, delete */}
-              <button className="w-full h-10 sm:h-12 flex items-center justify-center text-4xl sm:text-5xl font-black leading-none text-[#91C8E4]">
-                •
-              </button>
-
-              <button
-                onClick={() => handleNumberClick('0')}
-                className="w-full h-10 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl font-bold transition-all active:scale-95 hover:bg-gray-50 rounded-lg text-[#4682A9]"
-              >
-                0
-              </button>
-
-              <button
-                onClick={handleDelete}
-                className="w-full h-10 sm:h-12 flex items-center justify-center transition-all active:scale-95 hover:bg-gray-50 rounded-lg text-[#4682A9]"
-              >
-                <Delete className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
-              </button>
-            </div>
-          </div>
-
           {/* Help Text */}
-          <div className="text-center mt-6 sm:mt-8">
-            <p className="text-xs sm:text-sm text-gray-500">
-              Need help? <span className="font-semibold cursor-pointer hover:opacity-70 transition text-[#91C8E4]">Contact Support</span>
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              Need help?{' '}
+              <span className="font-semibold cursor-pointer hover:text-[#4682A9] transition-colors text-[#4682A9]">
+                Contact Support
+              </span>
             </p>
           </div>
+        </div>
+
+        {/* Number Pad */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
+          <div className="grid grid-cols-3 gap-4">
+            {/* Number buttons */}
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((number) => (
+              <button
+                key={number}
+                onClick={() => handleNumberClick(number.toString())}
+                className="h-14 flex items-center justify-center text-2xl font-bold rounded-xl border-2 border-gray-200 bg-white hover:border-[#91C8E4] hover:bg-[#91C8E4]/5 transition-all active:scale-95 text-[#4682A9]"
+              >
+                {number}
+              </button>
+            ))}
+
+            {/* Bottom row: empty, 0, delete */}
+            <div></div>
+            <button
+              onClick={() => handleNumberClick('0')}
+              className="h-14 flex items-center justify-center text-2xl font-bold rounded-xl border-2 border-gray-200 bg-white hover:border-[#91C8E4] hover:bg-[#91C8E4]/5 transition-all active:scale-95 text-[#4682A9]"
+            >
+              0
+            </button>
+            <button
+              onClick={handleDelete}
+              className="h-14 flex items-center justify-center rounded-xl border-2 border-gray-200 bg-white hover:border-[#91C8E4] hover:bg-[#91C8E4]/5 transition-all active:scale-95 text-[#4682A9]"
+            >
+              <Delete className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Back to Login */}
+        <div className="text-center">
+          <span className="text-gray-600 text-sm">Changed your mind? </span>
+          <button 
+            onClick={() => router.push('/login')}
+            className="text-[#4682A9] hover:text-[#749BC2] font-bold text-sm transition-colors"
+          >
+            Back to Login
+          </button>
+        </div>
         </div>
       </div>
     </div>
