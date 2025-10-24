@@ -83,7 +83,7 @@ export default function LoginPage() {
         <div className="hidden sm:flex items-center space-x-2 text-sm text-[#4682A9]">
           <span>New here?</span>
           <Link 
-            href="/signup" 
+            href="/user/signup" 
             className="text-[#4682A9] hover:text-[#749BC2] font-semibold transition-colors"
           >
             Create Account
@@ -272,7 +272,7 @@ export default function LoginPage() {
               {/* Sign Up Link - Mobile */}
               <div className="text-center mt-8 sm:hidden">
                 <span className="text-[#4682A9] text-sm">Don&apos;t have an account? </span>
-                <Link href="/signup" className="text-[#4682A9] hover:text-[#749BC2] font-semibold text-sm transition-colors">
+                <Link href="/user/signup" className="text-[#4682A9] hover:text-[#749BC2] font-semibold text-sm transition-colors">
                   Sign Up
                 </Link>
               </div>

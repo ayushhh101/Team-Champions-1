@@ -64,7 +64,7 @@ function SignupPage() {
         <div className="hidden sm:flex items-center space-x-2 text-sm text-[#4682A9]">
           <span>Already registered?</span>
           <Link 
-            href="/login" 
+            href="/user/login" 
             className="text-[#4682A9] hover:text-[#749BC2] font-semibold transition-colors"
           >
             Sign In
@@ -358,7 +358,7 @@ function SignupPage() {
               {/* Login Link - Mobile */}
               <div className="text-center mt-6 sm:hidden">
                 <span className="text-[#4682A9] text-sm">Already have an account? </span>
-                <Link href="/login" className="text-[#4682A9] hover:text-[#749BC2] font-semibold text-sm transition-colors">
+                <Link href="/user/login" className="text-[#4682A9] hover:text-[#749BC2] font-semibold text-sm transition-colors">
                   Sign In
                 </Link>
               </div>
