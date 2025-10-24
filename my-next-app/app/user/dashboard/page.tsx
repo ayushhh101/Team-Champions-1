@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import BottomNavigation from '../components/BottomNavigation';
+import BottomNavigation from '../../components/BottomNavigation';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 
 interface Doctor {
   id: string;
@@ -43,7 +44,7 @@ export default function HomePage() {
         const userId = localStorage.getItem('userId');
         
         if (!userId) {
-          router.push('/login');
+          router.push('/user/login');
           return;
         }
 
@@ -145,6 +146,7 @@ export default function HomePage() {
   }
 
   return (
+    <ProtectedRoute>
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -335,7 +337,7 @@ export default function HomePage() {
                           </span>
                           <Link
                             // href={`/appointments?doctorId=${doctor.id}`} 
-                           href={`/book-appointment/${doctor.id}`}
+                           href={`/user/book-appointment/${doctor.id}`}
                             className="px-3 py-1.5 sm:px-4 sm:py-2 bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white text-xs sm:text-sm font-semibold rounded-lg hover:shadow-md transition-all"
                           >
                             Book Now
@@ -352,5 +354,6 @@ export default function HomePage() {
       </main>
       <BottomNavigation activeTab="home" />
     </div>
+    </ProtectedRoute>
   );
 }

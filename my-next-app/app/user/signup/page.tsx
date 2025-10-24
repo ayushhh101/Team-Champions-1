@@ -32,7 +32,7 @@ function SignupPage() {
     try {
       console.log('Signup with:', name, email, phone, password);
       await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push('/login');
+      router.push('/user/login');
     } catch (err) {
       console.error('Signup error:', err);
       alert('Unable to create account. Please try again.');

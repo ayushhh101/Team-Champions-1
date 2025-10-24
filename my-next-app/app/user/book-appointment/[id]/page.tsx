@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Image from 'next/image'
 import { ChevronLeft, Calendar, User, Phone, Mail } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
 interface Doctor {
   id: string
@@ -56,7 +57,7 @@ export default function BookAppointmentPage() {
           setPatientPhone(userMobile)
         } else {
           toast.error('Doctor not found')
-          router.push('/home')
+          router.push('/user/dashboard')
         }
       } catch (error) {
         console.error('Error fetching doctor:', error)
@@ -105,7 +106,7 @@ export default function BookAppointmentPage() {
     })
 
     setTimeout(() => {
-      router.push('/appointments')
+      router.push('/user/appointments')
     }, 2000)
   }
 
@@ -122,6 +123,7 @@ export default function BookAppointmentPage() {
   }
 
   return (
+    <ProtectedRoute>
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-center" />
 
@@ -402,5 +404,6 @@ export default function BookAppointmentPage() {
         </div>
       </main>
     </div>
+    </ProtectedRoute>
   )
 }

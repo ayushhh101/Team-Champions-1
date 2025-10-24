@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { FaArrowLeft, FaCalendarAlt, FaPlus } from 'react-icons/fa';
 import { ChevronLeft } from 'lucide-react'
 import { useEffect, useState } from 'react';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 
 interface Doctor {
   id: string;
@@ -153,7 +154,7 @@ export default function AppointmentScheduledPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600">Failed to load appointment details</p>
-          <Link href="/home" className="mt-4 inline-block text-blue-500 hover:underline">
+          <Link href="/user/dashboard" className="mt-4 inline-block text-blue-500 hover:underline">
             Back to Home
           </Link>
         </div>
@@ -163,6 +164,7 @@ export default function AppointmentScheduledPage() {
 
 
   return (
+    <ProtectedRoute>
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       {/* <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
@@ -347,5 +349,6 @@ export default function AppointmentScheduledPage() {
         </div>
       </footer>
     </div>
+    </ProtectedRoute>
   );
 }

@@ -6,7 +6,8 @@ import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, Delete } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
-import userData from '../data/data.json'
+import userData from '../../data/data.json'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
 export default function OTPPage() {
   const router = useRouter()
@@ -53,7 +54,7 @@ export default function OTPPage() {
       }
     } else {
       // If no user data found, redirect to login
-      router.push('/login')
+      router.push('/user/login')
     }
   }, [router])
 
@@ -114,7 +115,7 @@ export default function OTPPage() {
     
     if (!userDetails) {
       toast.error('User session not found. Please login again.')
-      router.push('/login')
+      router.push('/user/login')
       return
     }
     
@@ -157,7 +158,7 @@ export default function OTPPage() {
           
           // Redirect to home page after 2 seconds
           setTimeout(() => {
-            router.push('/home')
+            router.push('/user/home')
           }, 2000)
         } else {
           toast.error('Invalid OTP for this user. Please try again.', {
@@ -284,6 +285,7 @@ export default function OTPPage() {
   }
 
   return (
+    <ProtectedRoute>
     <div className="min-h-screen bg-[#f2f1ef] flex flex-col">
       <Toaster />
       
@@ -433,8 +435,8 @@ export default function OTPPage() {
         {/* Back to Login */}
         <div className="text-center">
           <span className="text-gray-600 text-sm">Changed your mind? </span>
-          <button 
-            onClick={() => router.push('/login')}
+          <button
+            onClick={() => router.push('/user/login')}
             className="text-[#4682A9] hover:text-[#749BC2] font-bold text-sm transition-colors"
           >
             Back to Login
@@ -443,5 +445,6 @@ export default function OTPPage() {
         </div>
       </div>
     </div>
+    </ProtectedRoute>
   )
 }

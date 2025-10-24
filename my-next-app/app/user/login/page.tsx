@@ -48,7 +48,7 @@ export default function LoginPage() {
           localStorage.setItem('rememberMe', 'true');
         }
         
-        router.push('/otp');  
+        router.push('/user/otp');  
       } else {
         alert('User not found. Please sign up first.');
       }
