@@ -14,7 +14,7 @@ export default function OTPPage() {
   const [otp, setOtp] = useState(['', '', '', ''])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [timeLeft, setTimeLeft] = useState(55)
-  const [userDetails, setUserDetails] = useState<{mobile: string, email: string, expectedOtp: string} | null>(null)
+  const [userDetails, setUserDetails] = useState<{mobile: string, email: string, expectedOtp: string, loginType: string} | null>(null)
   const inputRefs = Array(4).fill(null).map(() => React.createRef<HTMLInputElement>())
   const hasShownOtp = useRef(false) // Track if OTP has been shown
 
@@ -23,12 +23,14 @@ export default function OTPPage() {
     const userMobile = localStorage.getItem('userMobile')
     const userEmail = localStorage.getItem('userEmail')
     const userOTP = localStorage.getItem('userOTP')
+    const loginType = localStorage.getItem('loginType') || 'patient'
     
     if (userMobile && userEmail && userOTP) {
       setUserDetails({
         mobile: userMobile,
         email: userEmail,
-        expectedOtp: userOTP
+        expectedOtp: userOTP,
+        loginType: loginType
       })
       
       // Show OTP in toast message only once
@@ -119,13 +121,16 @@ export default function OTPPage() {
       return
     }
     
-    // Find user with matching OTP
-    const validUser = userData.users.find(user => user.otp === otpCode)
+    // Search in appropriate data based on login type
+    const searchData = userDetails.loginType === 'doctor' ? userData.doctors : userData.users
+    
+    // Find user/doctor with matching OTP
+    const validUser = searchData.find(user => user.otp === otpCode)
     
     if (validUser) {
       // Check if OTP is not expired
       const now = new Date()
-      const otpExpiry = new Date(validUser.otpExpiry)
+      const otpExpiry = validUser.otpExpiry ? new Date(validUser.otpExpiry) : new Date(0)
       
       if (now <= otpExpiry) {
         // Verify that the entered OTP matches the expected OTP for this user
@@ -133,11 +138,18 @@ export default function OTPPage() {
           // save user data to localStorage
           const userInfo = {
             id: validUser.id,
-            phone: validUser.mobile,
-            email: validUser.email,
+            phone: (validUser as any).mobile || (validUser as any).phone || '',
+            email: (validUser as any).email || '',
             verified: true,
             verifiedAt: new Date().toISOString(),
-            otp: otpCode
+            otp: otpCode,
+            loginType: userDetails.loginType,
+            ...(userDetails.loginType === 'doctor' && {
+              name: (validUser as any).name || '',
+              speciality: (validUser as any).speciality || '',
+              qualification: (validUser as any).qualification || '',
+              location: (validUser as any).location || ''
+            })
           }
           localStorage.setItem('userData', JSON.stringify(userInfo))
           
@@ -156,9 +168,13 @@ export default function OTPPage() {
             icon: '✓',
           })
           
-          // Redirect to home page after 2 seconds
+          // Redirect to appropriate dashboard based on login type
           setTimeout(() => {
-            router.push('/user/dashboard')
+            if (userDetails.loginType === 'doctor') {
+              router.push('/doctor/dashboard') // Create doctor dashboard later
+            } else {
+              router.push('/user/dashboard')
+            }
           }, 2000)
         } else {
           toast.error('Invalid OTP for this user. Please try again.', {
@@ -323,9 +339,19 @@ export default function OTPPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-[#4682A9] mb-2">Verify Your Account</h2>
-            <p className="text-gray-600 mb-4">We&lsquo;ve sent a verification code to</p>
+            <p className="text-gray-600 mb-4">
+              {userDetails.loginType === 'doctor' 
+                ? "We've sent a verification code to your registered number" 
+                : "We've sent a verification code to"
+              }
+            </p>
             <p className="text-[#749BC2] font-bold">{formatPhoneNumber(userDetails.mobile)}</p>
             <p className="text-gray-500 text-sm mt-1">{userDetails.email}</p>
+            {userDetails.loginType === 'doctor' && (
+              <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-[#91C8E4]/20 text-[#4682A9] text-sm font-semibold">
+                👨‍⚕️ Doctor Verification
+              </div>
+            )}
           </div>
 
           {/* OTP Input */}
