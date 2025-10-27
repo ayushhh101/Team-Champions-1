@@ -8,7 +8,8 @@ import { useRouter } from 'next/navigation';
 export default function LoginPage() {
   const [emailOrMobile, setEmailOrMobile] = useState(''); 
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);   
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginType, setLoginType] = useState<'patient' | 'doctor'>('patient');
   const router = useRouter();  
 
   const handleLogin = async (e: React.FormEvent) => {   
@@ -29,20 +30,39 @@ export default function LoginPage() {
       }
       
       const data = await response.json();
-      const users = data.users;
+      
+      // Search in appropriate data based on login type
+      const searchData = loginType === 'doctor' ? data.doctors : data.users;
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const user = users.find((u: any) =>  
-        u.email.toLowerCase() === emailOrMobile.toLowerCase().trim() || 
-        u.mobile === emailOrMobile.trim()
-      );
+      const user = searchData.find((u: any) => {
+        const email = u.email?.toLowerCase() || '';
+        const mobile = u.mobile || '';
+        const phone = u.phone || '';
+        const inputLower = emailOrMobile.toLowerCase().trim();
+        const inputTrim = emailOrMobile.trim();
+        
+        return email === inputLower || mobile === inputTrim || phone === inputTrim;
+      });
       
       if (user) {
         localStorage.setItem('loginEmailOrMobile', emailOrMobile);
         localStorage.setItem('userId', user.id);
-        localStorage.setItem('userEmail', user.email);
-        localStorage.setItem('userMobile', user.mobile);
-        localStorage.setItem('userOTP', user.otp);
+        localStorage.setItem('userEmail', user.email || '');
+        localStorage.setItem('userMobile', user.mobile || user.phone || '');
+        localStorage.setItem('userOTP', user.otp || '');
+        localStorage.setItem('loginType', loginType);
+        
+        // Store additional doctor info if doctor login
+        if (loginType === 'doctor') {
+          localStorage.setItem('doctorName', user.name || '');
+          localStorage.setItem('doctorSpeciality', user.speciality || '');
+          localStorage.setItem('doctorQualification', user.qualification || '');
+          localStorage.setItem('doctorLocation', user.location || '');
+        } else {
+          // Store patient info
+          localStorage.setItem('patientLocation', user.location || '');
+        }
         
         if (rememberMe) {
           localStorage.setItem('rememberMe', 'true');
@@ -50,7 +70,7 @@ export default function LoginPage() {
         
         router.push('/user/otp');  
       } else {
-        alert('User not found. Please sign up first.');
+        alert(`${loginType === 'doctor' ? 'Doctor' : 'User'} not found. Please check your credentials.`);
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -166,24 +186,58 @@ export default function LoginPage() {
                 <p className="text-[#4682A9]">Enter your credentials to continue</p>
               </div>
 
+              {/* Login Type Toggle */}
+              <div className="mb-6">
+                <div className="flex bg-gray-100 rounded-xl p-1">
+                  <button
+                    type="button"
+                    onClick={() => setLoginType('patient')}
+                    className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
+                      loginType === 'patient'
+                        ? 'bg-[#4682A9] text-white shadow-sm'
+                        : 'text-[#4682A9] hover:text-[#749BC2]'
+                    }`}
+                  >
+                    👤 Patient Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginType('doctor')}
+                    className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
+                      loginType === 'doctor'
+                        ? 'bg-[#4682A9] text-white shadow-sm'
+                        : 'text-[#4682A9] hover:text-[#749BC2]'
+                    }`}
+                  >
+                    👨‍⚕️ Doctor Login
+                  </button>
+                </div>
+              </div>
+
               <form onSubmit={handleLogin} className="space-y-6">
                 {/* Email/Mobile Input */}
                 <div>
                   <label htmlFor="emailOrMobile" className="block text-sm font-semibold text-[#2C5F7C] mb-2">
-                    Email or Mobile Number
+                    {loginType === 'doctor' ? 'Doctor Email or Mobile' : 'Email or Mobile Number'}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-[#91C8E4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                      {loginType === 'doctor' ? (
+                        <svg className="h-5 w-5 text-[#91C8E4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      ) : (
+                        <svg className="h-5 w-5 text-[#91C8E4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      )}
                     </div>
                     <input
                       type="text"
                       id="emailOrMobile"
                       value={emailOrMobile}
                       onChange={(e) => setEmailOrMobile(e.target.value)}
-                      placeholder="Enter email or mobile"
+                      placeholder={loginType === 'doctor' ? 'Enter doctor email or mobile' : 'Enter email or mobile'}
                       disabled={isLoading}
                       required
                       className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-transparent placeholder:text-[#91C8E4] bg-white text-[#2C5F7C] transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
@@ -232,6 +286,7 @@ export default function LoginPage() {
                   )}
                 </button>
               </form>
+
 
               {/* Divider */}
               <div className="relative my-8">
