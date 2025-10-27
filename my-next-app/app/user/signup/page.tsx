@@ -13,6 +13,10 @@ function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [signupType, setSignupType] = useState<'patient' | 'doctor'>('patient');
+  const [speciality, setSpeciality] = useState('');
+  const [qualification, setQualification] = useState('');
+  const [location, setLocation] = useState('');
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -27,11 +31,42 @@ function SignupPage() {
       return;
     }
     
+    // Additional validation for doctor signup
+    if (signupType === 'doctor') {
+      if (!speciality.trim() || !qualification.trim() || !location.trim()) {
+        alert("Please fill in all doctor-specific fields!");
+        return;
+      }
+    }
+    
     setIsLoading(true);
     
     try {
-      console.log('Signup with:', name, email, phone, password);
+      console.log('Signup with:', { 
+        name, 
+        email, 
+        phone, 
+        password, 
+        signupType,
+        ...(signupType === 'doctor' && { speciality, qualification, location })
+      });
+      
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Store signup info in localStorage for demo
+      localStorage.setItem('signupName', name);
+      localStorage.setItem('signupEmail', email);
+      localStorage.setItem('signupPhone', phone);
+      localStorage.setItem('signupType', signupType);
+      
+      if (signupType === 'doctor') {
+        localStorage.setItem('signupSpeciality', speciality);
+        localStorage.setItem('signupQualification', qualification);
+        localStorage.setItem('signupLocation', location);
+      }
+      
+      alert(`${signupType === 'doctor' ? 'Doctor' : 'Patient'} account created successfully!`);
       router.push('/user/login');
     } catch (err) {
       console.error('Signup error:', err);
@@ -84,12 +119,15 @@ function SignupPage() {
               </div>
               
               <h1 className="text-5xl font-bold text-[#2C5F7C] leading-tight">
-                Start Your
-                <span className="text-[#4682A9]"> Health Journey</span>
+                {signupType === 'doctor' ? 'Start Your Medical' : 'Start Your'}
+                <span className="text-[#4682A9]"> {signupType === 'doctor' ? 'Practice' : 'Health Journey'}</span>
               </h1>
               
               <p className="text-lg text-[#4682A9] leading-relaxed">
-                Create your account to access top healthcare professionals, manage appointments, and take control of your health.
+                {signupType === 'doctor' 
+                  ? 'Join our platform to connect with patients, manage appointments, and grow your medical practice.'
+                  : 'Create your account to access top healthcare professionals, manage appointments, and take control of your health.'
+                }
               </p>
             </div>
 
@@ -144,7 +182,35 @@ function SignupPage() {
               {/* Form Header */}
               <div className="text-center mb-6">
                 <h2 className="text-3xl font-bold text-[#2C5F7C] mb-2">Create Account</h2>
-                <p className="text-[#4682A9]">Join thousands of satisfied patients</p>
+                <p className="text-[#4682A9]">Join thousands of satisfied {signupType === 'doctor' ? 'doctors' : 'patients'}</p>
+              </div>
+
+              {/* Signup Type Toggle */}
+              <div className="mb-6">
+                <div className="flex bg-gray-100 rounded-xl p-1">
+                  <button
+                    type="button"
+                    onClick={() => setSignupType('patient')}
+                    className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
+                      signupType === 'patient'
+                        ? 'bg-[#4682A9] text-white shadow-sm'
+                        : 'text-[#4682A9] hover:text-[#749BC2]'
+                    }`}
+                  >
+                    👤 Patient Signup
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSignupType('doctor')}
+                    className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
+                      signupType === 'doctor'
+                        ? 'bg-[#4682A9] text-white shadow-sm'
+                        : 'text-[#4682A9] hover:text-[#749BC2]'
+                    }`}
+                  >
+                    👨‍⚕️ Doctor Signup
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleSignup} className="space-y-4">
@@ -274,6 +340,87 @@ function SignupPage() {
                   </div>
                 </div>
 
+                {/* Doctor-specific fields */}
+                {signupType === 'doctor' && (
+                  <>
+                    {/* Speciality and Qualification */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Speciality Input */}
+                      <div>
+                        <label htmlFor="speciality" className="block text-sm font-semibold text-[#2C5F7C] mb-2">
+                          Speciality
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-[#91C8E4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                          </div>
+                          <input
+                            type="text"
+                            id="speciality"
+                            value={speciality}
+                            onChange={(e) => setSpeciality(e.target.value)}
+                            placeholder="e.g. Cardiology"
+                            disabled={isLoading}
+                            required
+                            className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-transparent placeholder:text-[#91C8E4] bg-white text-[#2C5F7C] transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Qualification Input */}
+                      <div>
+                        <label htmlFor="qualification" className="block text-sm font-semibold text-[#2C5F7C] mb-2">
+                          Qualification
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-[#91C8E4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                          </div>
+                          <input
+                            type="text"
+                            id="qualification"
+                            value={qualification}
+                            onChange={(e) => setQualification(e.target.value)}
+                            placeholder="e.g. MBBS, MD"
+                            disabled={isLoading}
+                            required
+                            className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-transparent placeholder:text-[#91C8E4] bg-white text-[#2C5F7C] transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Location Input */}
+                    <div>
+                      <label htmlFor="location" className="block text-sm font-semibold text-[#2C5F7C] mb-2">
+                        Practice Location
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <svg className="h-5 w-5 text-[#91C8E4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <input
+                          type="text"
+                          id="location"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          placeholder="City, State"
+                          disabled={isLoading}
+                          required
+                          className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-transparent placeholder:text-[#91C8E4] bg-white text-[#2C5F7C] transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 {/* Terms Checkbox */}
                 <div className="flex items-start">
                   <label className="flex items-start space-x-2 cursor-pointer group">
@@ -310,10 +457,10 @@ function SignupPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Creating Account...
+                      Creating {signupType === 'doctor' ? 'Doctor' : 'Patient'} Account...
                     </div>
                   ) : (
-                    'Create Account'
+                    `Create ${signupType === 'doctor' ? 'Doctor' : 'Patient'} Account`
                   )}
                 </button>
               </form>
