@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Calendar, Clock, Users, TrendingUp, Bell, ChevronRight, Star, LogOut, MapPin } from 'lucide-react';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 
 interface Doctor {
   id: string;
@@ -142,6 +143,7 @@ export default function DoctorDashboard() {
   }
 
   return (
+    <ProtectedRoute>
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Top Header */}
       <header className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50 shadow-sm">
@@ -416,5 +418,6 @@ export default function DoctorDashboard() {
         </div>
       )}
     </div>
+    </ProtectedRoute>
   );
 }
