@@ -307,7 +307,7 @@ export default function DoctorProfile() {
                 />
               ) : (
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#2C5F7C] wrap-break-word whitespace-normal">
-                  Dr. {doctor.name}
+                  {doctor.name}
                 </h2>
               )}
 
@@ -361,7 +361,7 @@ export default function DoctorProfile() {
                     type="email"
                     value={editForm.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
+                    className="w-full px-5 py-4 border-2 text-gray-600 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
                     placeholder="doctor@example.com"
                   />
                 ) : (
@@ -382,7 +382,7 @@ export default function DoctorProfile() {
                     type="tel"
                     value={editForm.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
+                    className="w-full px-5 py-4 border-2 text-gray-600 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
                     placeholder="+1 (555) 123-4567"
                   />
                 ) : (
@@ -403,7 +403,7 @@ export default function DoctorProfile() {
                     type="text"
                     value={editForm.location}
                     onChange={(e) => handleInputChange('location', e.target.value)}
-                    className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
+                    className="w-full px-5 py-4 border-2 text-gray-600 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
                     placeholder="City, State"
                   />
                 ) : (
@@ -424,7 +424,7 @@ export default function DoctorProfile() {
                     type="text"
                     value={editForm.licenseNumber}
                     onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
-                    className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
+                    className="w-full px-5 py-4 border-2 text-gray-600 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
                     placeholder="Medical License Number"
                   />
                 ) : (
@@ -457,7 +457,7 @@ export default function DoctorProfile() {
                     type="text"
                     value={editForm.speciality}
                     onChange={(e) => handleInputChange('speciality', e.target.value)}
-                    className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
+                    className="w-full px-5 py-4 border-2 text-gray-600 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
                     placeholder="e.g., Cardiology"
                   />
                 ) : (
@@ -478,7 +478,7 @@ export default function DoctorProfile() {
                     type="text"
                     value={editForm.qualification}
                     onChange={(e) => handleInputChange('qualification', e.target.value)}
-                    className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
+                    className="w-full px-5 py-4 border-2 text-gray-600 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
                     placeholder="e.g., MBBS, MD"
                   />
                 ) : (
@@ -499,7 +499,7 @@ export default function DoctorProfile() {
                     type="number"
                     value={editForm.experience}
                     onChange={(e) => handleInputChange('experience', e.target.value)}
-                    className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
+                    className="w-full px-5 py-4 border-2 text-gray-600 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
                     placeholder="Years"
                     min="0"
                   />
@@ -521,7 +521,7 @@ export default function DoctorProfile() {
                     type="number"
                     value={editForm.price}
                     onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
+                    className="w-full px-5 py-4 border-2 text-gray-600 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all shadow-sm hover:shadow-md"
                     placeholder="Fee amount"
                     min="0"
                   />
@@ -547,7 +547,7 @@ export default function DoctorProfile() {
                   value={editForm.about}
                   onChange={(e) => handleInputChange('about', e.target.value)}
                   rows={6}
-                  className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all resize-none shadow-sm hover:shadow-md"
+                  className="w-full px-5 py-4 border-2 border-[#91C8E4]/30 rounded-xl focus:outline-none focus:ring-2  focus:ring-[#91C8E4] focus:border-[#4682A9] transition-all resize-none shadow-sm hover:shadow-md"
                   placeholder="Tell patients about yourself, your approach to medicine, and your experience..."
                 />
                 <div className="absolute bottom-3 right-3 text-xs text-[#4682A9]">
