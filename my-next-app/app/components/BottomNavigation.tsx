@@ -26,7 +26,7 @@ export default function BottomNavigation({ activeTab = 'home' }: BottomNavigatio
 
           {/* Appointments */}
           <Link 
-            href="/user/appointments" 
+            href="/user/appointment-history" 
             className={`flex flex-col items-center space-y-0.5 sm:space-y-1 min-w-0 ${
               activeTab === 'appointments' ? 'text-[#4FC3F7]' : 'text-gray-600 hover:text-[#4FC3F7]'
             }`}

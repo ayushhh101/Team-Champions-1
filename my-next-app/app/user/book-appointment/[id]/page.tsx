@@ -70,7 +70,67 @@ export default function BookAppointmentPage() {
     fetchDoctor()
   }, [doctorId, router])
 
-  const handleBookAppointment = () => {
+//   const handleBookAppointment = () => {
+//   if (!selectedDate || !selectedTime || !patientName || !patientPhone) {
+//     toast.error('Please fill all required fields')
+//     return
+//   }
+
+//   const appointment = {
+//     id: Date.now().toString(),
+//     doctorId: doctor?.id,
+//     doctorName: doctor?.name,
+//     speciality: doctor?.speciality,
+//     date: selectedDate,
+//     time: selectedTime,
+//     patientName,
+//     patientPhone,
+//     patientEmail,
+//     notes,
+//     price: doctor?.price,
+//     status: 'confirmed',
+//     createdAt: new Date().toISOString()
+//   }
+
+
+//   const existingAppointments = JSON.parse(localStorage.getItem('appointments') || '[]')
+//   existingAppointments.push(appointment)
+//   localStorage.setItem('appointments', JSON.stringify(existingAppointments))
+
+//   // Store appointment data for the scheduled page
+//   const appointmentData = {
+//     appointmentId: appointment.id,
+//     doctorId: doctor?.id,
+//     date: selectedDate,
+//     time: selectedTime,
+//     patientName,
+//     patientPhone,
+//     patientEmail
+//   }
+  
+//   // Store in sessionStorage for the appointment scheduled page
+//   sessionStorage.setItem('lastAppointment', JSON.stringify(appointmentData))
+
+//   toast.success('Appointment booked successfully!', {
+//     duration: 2000,
+//     style: {
+//       background: '#34D399',
+//       color: '#ffffff',
+//       fontWeight: 'bold',
+//     },
+//   })
+
+  
+//   // setTimeout(() => {
+//   //   router.push('/user/appointments')
+//   // }, 2000)
+// // }
+// setTimeout(() => {
+//     router.push(`/user/appointments?doctorId=${doctor?.id}&date=${selectedDate}&time=${selectedTime}&appointmentId=${appointment.id}`)
+//   }, 2000)
+// }
+
+const handleBookAppointment = async () => {
   if (!selectedDate || !selectedTime || !patientName || !patientPhone) {
     toast.error('Please fill all required fields')
     return
@@ -92,42 +152,48 @@ export default function BookAppointmentPage() {
     createdAt: new Date().toISOString()
   }
 
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(appointment),
+    })
 
-  const existingAppointments = JSON.parse(localStorage.getItem('appointments') || '[]')
-  existingAppointments.push(appointment)
-  localStorage.setItem('appointments', JSON.stringify(existingAppointments))
+    if (!res.ok) throw new Error('Failed to save booking')
 
-  // Store appointment data for the scheduled page
-  const appointmentData = {
-    appointmentId: appointment.id,
-    doctorId: doctor?.id,
-    date: selectedDate,
-    time: selectedTime,
-    patientName,
-    patientPhone,
-    patientEmail
+    toast.success('Appointment booked successfully!', {
+      duration: 2000,
+      style: {
+        background: '#34D399',
+        color: '#ffffff',
+        fontWeight: 'bold',
+      },
+    })
+
+    // Store appointment data for the scheduled page
+    const appointmentData = {
+      appointmentId: appointment.id,
+      doctorId: doctor?.id,
+      date: selectedDate,
+      time: selectedTime,
+      patientName,
+      patientPhone,
+      patientEmail,
+    }
+
+    // Store in sessionStorage for the appointment scheduled page
+    sessionStorage.setItem('lastAppointment', JSON.stringify(appointmentData))
+
+    setTimeout(() => {
+      router.push(`/user/appointments?doctorId=${doctor?.id}&date=${selectedDate}&time=${selectedTime}&appointmentId=${appointment.id}`)
+    }, 2000)
+    
+  } catch (error) {
+    toast.error('Error booking appointment. Please try again.')
+    console.error('Booking error:', error)
   }
-  
-  // Store in sessionStorage for the appointment scheduled page
-  sessionStorage.setItem('lastAppointment', JSON.stringify(appointmentData))
-
-  toast.success('Appointment booked successfully!', {
-    duration: 2000,
-    style: {
-      background: '#34D399',
-      color: '#ffffff',
-      fontWeight: 'bold',
-    },
-  })
-
-  
-  // setTimeout(() => {
-  //   router.push('/user/appointments')
-  // }, 2000)
-// }
-setTimeout(() => {
-    router.push(`/user/appointments?doctorId=${doctor?.id}&date=${selectedDate}&time=${selectedTime}&appointmentId=${appointment.id}`)
-  }, 2000)
 }
 
   if (isLoading) {

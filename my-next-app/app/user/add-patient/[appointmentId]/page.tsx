@@ -44,78 +44,100 @@ export default function AddPatientDetailsPage() {
   const relationshipOptions = ['Son', 'Brother', 'Sister', 'Father', 'Mother', 'Spouse', 'Friend', 'Self']
 
   useEffect(() => {
-  if (!appointmentId) {
-    toast.error('Appointment ID is missing');
-    router.push('/appointments');
+    if (!appointmentId) {
+      toast.error('Appointment ID is missing');
+      router.push('/appointments');
+      return;
+    }
+
+    const appointments = JSON.parse(localStorage.getItem('userAppointments') || '[]');
+    const foundAppointment = appointments.find((apt: Appointment) => apt.id === appointmentId);
+    
+    if (foundAppointment) {
+      setAppointment(foundAppointment);
+      setFullName(foundAppointment.patientName || '');
+      setMobileNumber(foundAppointment.patientPhone || '');
+    } else {
+      toast.error('Appointment not found');
+      router.push('/appointments');
+    }
+  }, [appointmentId, router]);
+
+  // const handleSave = async () => {
+  //   // Validation
+  //   if (!fullName.trim()) {
+  //     toast.error('Please enter full name');
+  //     return;
+  //   }
+  //   if (!age || parseInt(age) < 1) {
+  //     toast.error('Please enter valid age');
+  //     return;
+  //   }
+  //   if (!mobileNumber.trim() || mobileNumber.length < 10) {
+  //     toast.error('Please enter valid mobile number');
+  //     return;
+  //   }
+  //   if (!weight || parseInt(weight) < 1) {
+  //     toast.error('Please enter valid weight');
+  //     return;
+  //   }
+  //   if (!problem.trim()) {
+  //     toast.error('Please describe your problem');
+  //     return;
+  //   }
+  //   if (!relationship) {
+  //     toast.error('Please select relationship with patient');
+  //     return;
+  //   }
+const handleSave = async () => {
+  // Validation
+  if (!fullName.trim()) {
+    toast.error('Please enter full name');
+    return;
+  }
+  if (!age || parseInt(age) < 1) {
+    toast.error('Please enter valid age');
+    return;
+  }
+  if (!mobileNumber.trim() || mobileNumber.length < 10) {
+    toast.error('Please enter valid mobile number');
+    return;
+  }
+  if (!weight || parseInt(weight) < 1) {
+    toast.error('Please enter valid weight');
+    return;
+  }
+  if (!problem.trim()) {
+    toast.error('Please describe your problem');
+    return;
+  }
+  if (!relationship) {
+    toast.error('Please select relationship with patient');
     return;
   }
 
-  const appointments = JSON.parse(localStorage.getItem('userAppointments') || '[]');
-  const foundAppointment = appointments.find((apt: Appointment) => apt.id === appointmentId);
-  
-  if (foundAppointment) {
-    setAppointment(foundAppointment);
-    setFullName(foundAppointment.patientName || '');
-  } else {
-    toast.error('Appointment not found');
-    router.push('/appointments');
-  }
-}, [appointmentId, router]);
+  // const patientDetails = {
+  //   appointmentId,
+  //   fullName,
+  //   age: parseInt(age),
+  //   gender,
+  //   mobileNumber,
+  //   weight: parseInt(weight),
+  //   problem,
+  //   relationship,
+  //   addedAt: new Date().toISOString()
+  // };
 
-  const handleSave = () => {
-    // Validation
-    if (!fullName.trim()) {
-      toast.error('Please enter full name')
-      return
-    }
-    if (!age || parseInt(age) < 1) {
-      toast.error('Please enter valid age')
-      return
-    }
-    if (!mobileNumber.trim() || mobileNumber.length < 10) {
-      toast.error('Please enter valid mobile number')
-      return
-    }
-    if (!weight || parseInt(weight) < 1) {
-      toast.error('Please enter valid weight')
-      return
-    }
-    if (!problem.trim()) {
-      toast.error('Please describe your problem')
-      return
-    }
-    if (!relationship) {
-      toast.error('Please select relationship with patient')
-      return
-    }
+  try {
+    // const res = await fetch('/api/bookings', {
+    //   method: 'PATCH',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({ appointmentId, patientDetails }),
+    // });
 
-    // Save patient details
-    const patientDetails = {
-      appointmentId,
-      fullName,
-      age: parseInt(age),
-      gender,
-      mobileNumber,
-      weight: parseInt(weight),
-      problem,
-      relationship,
-      addedAt: new Date().toISOString()
-    }
-
-    // Update appointment with patient details
-    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
-    const updatedAppointments = appointments.map((apt: Appointment) => {
-      if (apt.id === appointmentId) {
-        return {
-          ...apt,
-          patientDetails,
-          status: 'confirmed'
-        }
-      }
-      return apt
-    })
-    
-    localStorage.setItem('appointments', JSON.stringify(updatedAppointments))
+    // if (!res.ok) throw new Error('Failed to update patient details');
 
     toast.success('Patient details saved successfully!', {
       duration: 2000,
@@ -124,13 +146,17 @@ export default function AddPatientDetailsPage() {
         color: '#ffffff',
         fontWeight: 'bold',
       },
-    })
-    
-    // redirect this to fee confirmation page  & if required to chat page..
+    });
+
     setTimeout(() => {
-      router.push('')
-    }, 2000)
+      router.push('/user/payment'); // move to payment after save
+    }, 2000);
+
+  } catch (error) {
+    toast.error('Failed to save patient details. Please try again.');
+    console.error('Save error:', error);
   }
+};
 
   if (!appointment) {
     return (
@@ -343,9 +369,9 @@ export default function AddPatientDetailsPage() {
             {/* Save Button */}
             <button
               onClick={handleSave}
-              className="w-full py-4 mt-6 bg-gradient-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#7DB3D6] hover:to-[#3C7197]  text-white font-semibold text-lg rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.98] "
-            >
-              Save
+              className="w-full py-4 mt-6 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#7DB3D6] hover:to-[#3C7197]  text-white font-semibold text-lg rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.98] "
+            > 
+              Pay Consulting Fee
             </button>
 
             {/* Chat Button */}

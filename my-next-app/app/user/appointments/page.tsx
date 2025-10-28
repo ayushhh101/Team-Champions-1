@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable prefer-const */
+ 
 
 'use client';
 
@@ -521,7 +522,7 @@ export default function AppointmentScheduledPage() {
         <BottomNavigation activeTab="appointments" />
 
         {/* Footer Button */}
-        <footer className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 z-40">
+        {/* <footer className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <Link href="/appointments">
               <button className="w-full bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white py-3 rounded-lg text-md font-semibold hover:shadow-md transition-all duration-200 shadow-lg">
@@ -529,7 +530,7 @@ export default function AppointmentScheduledPage() {
               </button>
             </Link>
           </div>
-        </footer>
+        </footer> */}
       </div>
     </ProtectedRoute>
   );

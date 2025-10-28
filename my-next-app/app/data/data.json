@@ -167,8 +167,17 @@
       "rating": 4.8,
       "reviewCount": 0,
       "price": 2000,
-      "availableDates": ["2025-10-28", "2025-10-29", "2025-10-30"],
-      "availableTimes": ["09:00", "11:00", "15:00", "17:00"],
+      "availableDates": [
+        "2025-10-28",
+        "2025-10-29",
+        "2025-10-30"
+      ],
+      "availableTimes": [
+        "09:00",
+        "11:00",
+        "15:00",
+        "17:00"
+      ],
       "image": "/Dr.RajeshKumar.png",
       "isVerified": true,
       "licenseNumber": "MH12345",
@@ -192,8 +201,16 @@
       "rating": 4.6,
       "reviewCount": 0,
       "price": 1800,
-      "availableDates": ["2025-10-27", "2025-10-28", "2025-10-31"],
-      "availableTimes": ["10:00", "14:00", "16:30"],
+      "availableDates": [
+        "2025-10-27",
+        "2025-10-28",
+        "2025-10-31"
+      ],
+      "availableTimes": [
+        "10:00",
+        "14:00",
+        "16:30"
+      ],
       "image": "/Dr.SunitaSharma.png",
       "isVerified": true,
       "licenseNumber": "DL67890",
@@ -217,8 +234,17 @@
       "rating": 4.7,
       "reviewCount": 0,
       "price": 1200,
-      "availableDates": ["2025-10-28", "2025-10-30", "2025-11-01"],
-      "availableTimes": ["09:30", "11:30", "15:30", "17:30"],
+      "availableDates": [
+        "2025-10-28",
+        "2025-10-30",
+        "2025-11-01"
+      ],
+      "availableTimes": [
+        "09:30",
+        "11:30",
+        "15:30",
+        "17:30"
+      ],
       "image": "/Dr.AmitPatel.png",
       "isVerified": true,
       "licenseNumber": "KA11111",
@@ -242,8 +268,16 @@
       "rating": 4.9,
       "reviewCount": 0,
       "price": 1500,
-      "availableDates": ["2025-10-29", "2025-10-31", "2025-11-02"],
-      "availableTimes": ["10:00", "12:00", "16:00"],
+      "availableDates": [
+        "2025-10-29",
+        "2025-10-31",
+        "2025-11-02"
+      ],
+      "availableTimes": [
+        "10:00",
+        "12:00",
+        "16:00"
+      ],
       "image": "/Dr.MeeraJoshi.png",
       "isVerified": true,
       "licenseNumber": "MH54321",
@@ -267,8 +301,15 @@
       "rating": 4.8,
       "reviewCount": 0,
       "price": 2500,
-      "availableDates": ["2025-10-28", "2025-11-01", "2025-11-03"],
-      "availableTimes": ["11:00", "14:00"],
+      "availableDates": [
+        "2025-10-28",
+        "2025-11-01",
+        "2025-11-03"
+      ],
+      "availableTimes": [
+        "11:00",
+        "14:00"
+      ],
       "image": "/Dr.VikashSingh.png",
       "isVerified": true,
       "licenseNumber": "TN98765",
@@ -292,8 +333,16 @@
       "rating": 4.7,
       "reviewCount": 0,
       "price": 1200,
-      "availableDates": ["2025-10-28", "2025-10-26", "2025-10-29"],
-      "availableTimes": ["14:30", "10:30", "16:00"],
+      "availableDates": [
+        "2025-10-28",
+        "2025-10-26",
+        "2025-10-29"
+      ],
+      "availableTimes": [
+        "14:30",
+        "10:30",
+        "16:00"
+      ],
       "image": "/Dr.PriyaMalhotra.png",
       "isVerified": true,
       "licenseNumber": "DL22222",
@@ -317,8 +366,16 @@
       "rating": 4.5,
       "reviewCount": 0,
       "price": 1850,
-      "availableDates": ["2025-10-29", "2025-10-27", "2025-10-30"],
-      "availableTimes": ["11:00", "15:30", "09:30"],
+      "availableDates": [
+        "2025-10-29",
+        "2025-10-27",
+        "2025-10-30"
+      ],
+      "availableTimes": [
+        "11:00",
+        "15:30",
+        "09:30"
+      ],
       "image": "/Dr.VikramRao.png",
       "isVerified": true,
       "licenseNumber": "TN33333",
@@ -342,8 +399,16 @@
       "rating": 4.9,
       "reviewCount": 0,
       "price": 1300,
-      "availableDates": ["2025-10-28", "2025-10-26", "2025-10-31"],
-      "availableTimes": ["10:00", "14:30", "16:00"],
+      "availableDates": [
+        "2025-10-28",
+        "2025-10-26",
+        "2025-10-31"
+      ],
+      "availableTimes": [
+        "10:00",
+        "14:30",
+        "16:00"
+      ],
       "image": "/KavitaDesai.png",
       "isVerified": true,
       "licenseNumber": "MH44444",
@@ -367,8 +432,16 @@
       "rating": 4.2,
       "reviewCount": 6,
       "price": 750,
-      "availableDates": ["2025-10-25", "2025-11-01", "2025-11-08"],
-      "availableTimes": ["10:00", "14:00", "16:30"],
+      "availableDates": [
+        "2025-10-25",
+        "2025-11-01",
+        "2025-11-08"
+      ],
+      "availableTimes": [
+        "10:00",
+        "14:00",
+        "16:30"
+      ],
       "image": "/Dr.SameerKapoor.png",
       "isVerified": true,
       "licenseNumber": "KA55555",
@@ -377,6 +450,52 @@
       "appointmentSlots": [],
       "reviews": []
     }
+  ],
+  "bookings": [
+    {
+      "id": "1761660552800",
+      "doctorId": "doc3",
+      "doctorName": "Dr. Amit Patel",
+      "speciality": "Pediatrician",
+      "date": "2025-10-28",
+      "time": "09:30",
+      "patientName": "sarah williams",
+      "patientPhone": "+91-9876543212",
+      "patientEmail": "sarah.williams@email.com",
+      "notes": "",
+      "price": 1200,
+      "status": "confirmed",
+      "createdAt": "2025-10-28T14:09:12.800Z"
+    },
+    {
+      "id": "1761668749202",
+      "doctorId": "doc1",
+      "doctorName": "Dr. Rajesh Kumar",
+      "speciality": "Cardiologist",
+      "date": "2025-10-28",
+      "time": "09:00",
+      "patientName": "john smith",
+      "patientPhone": "+91-9876543211",
+      "patientEmail": "john.smith@email.com",
+      "notes": "",
+      "price": 2000,
+      "status": "confirmed",
+      "createdAt": "2025-10-28T16:25:49.202Z"
+    },
+    {
+      "id": "1761670536301",
+      "doctorId": "doc7",
+      "doctorName": "Dr. Vikram Rao",
+      "speciality": "Cardiologist",
+      "date": "2025-10-27",
+      "time": "15:30",
+      "patientName": "Debasmita Sarkar",
+      "patientPhone": "+91-9876543211",
+      "patientEmail": "john.smith@email.com",
+      "notes": "",
+      "price": 1850,
+      "status": "confirmed",
+      "createdAt": "2025-10-28T16:55:36.301Z"
+    }
   ]
 }
-    
