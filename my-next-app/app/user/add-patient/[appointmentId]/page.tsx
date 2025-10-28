@@ -27,6 +27,10 @@ export default function AddPatientDetailsPage() {
   const params = useParams()
   const appointmentId = params.appointmentId as string
 
+  useEffect(() => {
+    console.log('appointmentId from params:', appointmentId)
+  }, [appointmentId])
+
   const [appointment, setAppointment] = useState<Appointment | null>(null)
   const [fullName, setFullName] = useState('')
   const [age, setAge] = useState('')
@@ -40,20 +44,23 @@ export default function AddPatientDetailsPage() {
   const relationshipOptions = ['Son', 'Brother', 'Sister', 'Father', 'Mother', 'Spouse', 'Friend', 'Self']
 
   useEffect(() => {
-    // Load appointment from localStorage
-    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
-    const found = appointments.find((apt: Appointment) => apt.id === appointmentId)
-    
-    if (found) {
-      setAppointment(found)
-      // Pre-fill with appointment data
-      setFullName(found.patientName || '')
-      setMobileNumber(found.patientPhone || '')
-    } else {
-      toast.error('Appointment not found')
-      router.push('/user/appointments')
-    }
-  }, [appointmentId, router])
+  if (!appointmentId) {
+    toast.error('Appointment ID is missing');
+    router.push('/appointments');
+    return;
+  }
+
+  const appointments = JSON.parse(localStorage.getItem('userAppointments') || '[]');
+  const foundAppointment = appointments.find((apt: Appointment) => apt.id === appointmentId);
+  
+  if (foundAppointment) {
+    setAppointment(foundAppointment);
+    setFullName(foundAppointment.patientName || '');
+  } else {
+    toast.error('Appointment not found');
+    router.push('/appointments');
+  }
+}, [appointmentId, router]);
 
   const handleSave = () => {
     // Validation
@@ -118,9 +125,10 @@ export default function AddPatientDetailsPage() {
         fontWeight: 'bold',
       },
     })
-
+    
+    // redirect this to fee confirmation page  & if required to chat page..
     setTimeout(() => {
-      router.push('/user/appointments')
+      router.push('')
     }, 2000)
   }
 
@@ -335,10 +343,19 @@ export default function AddPatientDetailsPage() {
             {/* Save Button */}
             <button
               onClick={handleSave}
-              className="w-full mt-6 py-4 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white font-bold text-lg rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full py-4 mt-6 bg-gradient-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#7DB3D6] hover:to-[#3C7197]  text-white font-semibold text-lg rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.98] "
             >
               Save
             </button>
+
+            {/* Chat Button */}
+            <button
+              onClick={() => router.push(`/user/chat/${appointmentId}`)}
+              className=" w-full mt-4  text-sky-500 font-semibold text-lg border border-sky-300 rounded-2xl px-8 py-3  bg-white  hover:bg-sky-50shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center "
+            >
+              Quick query
+            </button>
+
           </div>
         </main>
       </div>
