@@ -58,101 +58,90 @@ export default function DoctorDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const doctorId = localStorage.getItem('doctorId');
-        
-        if (!doctorId) {
-          router.push('/user/login');
-          return;
-        }
-
-        // Fetch doctor data
-        const doctorResponse = await fetch('/api/doctors');
-        if (!doctorResponse.ok) {
-          throw new Error('Failed to fetch doctor data');
-        }
-        const doctorData = await doctorResponse.json();
-        const loggedInDoctor = doctorData.doctors?.find((d: any) => d.id === doctorId);
-        
-        if (!loggedInDoctor) {
-          router.push('/doctor/login');
-          return;
-        }
-        
-        setDoctor(loggedInDoctor);
-
-        // Fetch appointments for this doctor
-        try {
-          const appointmentsResponse = await fetch(`/api/appointments?doctorId=${doctorId}`);
-          if (appointmentsResponse.ok) {
-            const appointmentsData = await appointmentsResponse.json();
-            const todayAppointments = appointmentsData.appointments?.filter((apt: Appointment) => 
-              apt.doctorId === doctorId && apt.status === 'upcoming'
-            ) || [];
-            setAppointments(todayAppointments.slice(0, 4)); // Show first 4
-          }
-        } catch (error) {
-          console.error('Error fetching appointments:', error);
-          setAppointments([]);
-        }
-
-        // Generate sample notifications
-        const sampleNotifications: Notification[] = [
-          {
-            id: '1',
-            type: 'info',
-            title: 'New Appointment',
-            message: 'John Doe has booked an appointment for tomorrow at 10:00 AM',
-            timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
-            read: false
-          },
-          {
-            id: '2',
-            type: 'success',
-            title: 'Payment Received',
-            message: 'Payment of ₹500 received from Sarah Wilson',
-            timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
-            read: false
-          },
-          {
-            id: '3',
-            type: 'warning',
-            title: 'Schedule Reminder',
-            message: 'You have 3 appointments scheduled for today',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-            read: true
-          },
-          {
-            id: '4',
-            type: 'info',
-            title: 'Profile Update',
-            message: 'Your profile has been successfully updated',
-            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-            read: true
-          },
-          {
-            id: '5',
-            type: 'error',
-            title: 'Appointment Cancelled',
-            message: 'Mike Johnson cancelled his appointment for today',
-            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
-            read: false
-          }
-        ];
-        
-        setNotifications(sampleNotifications);
-
-      } catch (error) {
-        console.error('Error fetching data:', error);
+  const fetchData = async () => {
+    try {
+      const doctorId = localStorage.getItem('doctorId');
+      
+      if (!doctorId) {
         router.push('/user/login');
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
 
-    fetchData();
-  }, [router]);
+      // Fetch doctor data
+      const doctorResponse = await fetch('/api/doctors');
+      if (!doctorResponse.ok) {
+        throw new Error('Failed to fetch doctor data');
+      }
+      const doctorData = await doctorResponse.json();
+      const loggedInDoctor = doctorData.doctors?.find((d: any) => d.id === doctorId);
+      
+      if (!loggedInDoctor) {
+        router.push('/doctor/login');
+        return;
+      }
+      
+      setDoctor(loggedInDoctor);
+
+      // Fetch appointments for this doctor
+      try {
+        const appointmentsResponse = await fetch(`/api/appointments?doctorId=${doctorId}`);
+        if (appointmentsResponse.ok) {
+          const appointmentsData = await appointmentsResponse.json();
+          
+          // Get today's date in YYYY-MM-DD format
+          const today = new Date();
+          const todayString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+          
+          // Filter appointments for today only
+          const todayAppointments = appointmentsData.appointments?.filter((apt: Appointment) => {
+            // Normalize the appointment date to YYYY-MM-DD format
+            const appointmentDate = new Date(apt.date).toISOString().split('T')[0];
+            
+            return apt.doctorId === doctorId && 
+                   apt.status === 'upcoming' && 
+                   appointmentDate === todayString;
+          }) || [];
+          
+          // Sort by time (optional - shows earliest appointments first)
+          todayAppointments.sort((a: Appointment, b: Appointment) => {
+            const timeA = a.time.split(':').map(Number);
+            const timeB = b.time.split(':').map(Number);
+            return timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1]);
+          });
+          
+          setAppointments(todayAppointments.slice(0, 4)); // Show first 4 appointments
+        }
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+        setAppointments([]);
+      }
+
+      // Generate sample notifications (keep your existing code)
+      const sampleNotifications: Notification[] = [
+        {
+          id: '1',
+          type: 'info',
+          title: 'New Appointment',
+          message: 'John Doe has booked an appointment for tomorrow at 10:00 AM',
+          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+          read: false
+        },
+        // ... rest of your notifications
+      ];
+      
+      setNotifications(sampleNotifications);
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      router.push('/user/login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchData();
+}, [router]);
+
 
   const handleLogout = () => {
     localStorage.removeItem('doctorId');
@@ -207,11 +196,12 @@ export default function DoctorDashboard() {
   const unreadCount = notifications.filter(notif => !notif.read).length;
 
   const stats = {
-    todayAppointments: appointments.length,
-    totalPatients: 110,
-    avgRating: doctor?.rating || 4.8,
-    reviewCount: doctor?.reviewCount || 0
-  };
+  todayAppointments: appointments.length, 
+  totalPatients: 110,
+  avgRating: doctor?.rating || 4.8,
+  reviewCount: doctor?.reviewCount || 0
+};
+
 
   if (isLoading) {
     return (
@@ -449,7 +439,7 @@ export default function DoctorDashboard() {
       {/* Today's Schedule */}
       <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-[#91C8E4]/20 p-6 hover:shadow-xl transition-all duration-300">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold text-[#2C5F7C]">Today's Schedule</h2>
+          <h2 className="text-xl font-bold text-[#2C5F7C]">Today&apos;s Schedule</h2>
           <Link href="/doctor/appointments" className="text-sm font-semibold text-[#4682A9] hover:text-[#2C5F7C] transition-colors flex items-center gap-1 bg-[#91C8E4]/10 px-3 py-1.5 rounded-lg hover:bg-[#91C8E4]/20">
             View All <ChevronRight className="w-4 h-4" />
           </Link>

@@ -4,8 +4,25 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, MoreVertical } from 'lucide-react'
+import { ChevronLeft, MoreVertical, X, CreditCard, XCircle } from 'lucide-react'
 import BottomNavigation from '../../components/BottomNavigation'
+
+interface Booking {
+  id: string
+  doctorId: string
+  doctorName: string
+  speciality: string
+  date: string
+  time: string
+  status: 'confirmed' | 'completed' | 'cancelled'
+  patientName: string
+  patientPhone: string
+  patientEmail: string
+  price: number
+  notes?: string
+  paymentStatus?: 'paid' | 'not_paid'
+  createdAt: string
+}
 
 interface Doctor {
   id: string
@@ -22,6 +39,7 @@ interface Appointment {
   status: 'upcoming' | 'completed' | 'canceled'
   paymentStatus: 'paid' | 'not_paid'
   summaryAvailable?: boolean
+  price?: number
 }
 
 const TABS = [
@@ -34,52 +52,213 @@ export default function AppointmentHistoryPage() {
   const [tab, setTab] = useState<'upcoming' | 'completed' | 'canceled'>('upcoming')
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
+  const [doctors, setDoctors] = useState<Map<string, Doctor>>(new Map())
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [cancellingAppointment, setCancellingAppointment] = useState(false)
 
   useEffect(() => {
-    // TODO: Update the fetch URL to your real API endpoint
-    fetch('/api/appointments')
-      .then(res => res.json())
-      .then(data => {
-        setAppointments(data.appointments || [])
-      })
-      .catch(() => setAppointments([]))
-      .finally(() => setLoading(false))
+    fetchAppointments()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const fetchAppointments = async () => {
+    try {
+      // Get user email from localStorage
+      const userEmail = localStorage.getItem('userEmail')
+      
+      // Fetch doctors data first
+      const doctorsResponse = await fetch('/api/doctors')
+      const doctorsData = await doctorsResponse.json()
+      
+      // Create a map of doctors by ID for quick lookup
+      const doctorsMap = new Map<string, Doctor>()
+      if (doctorsData.doctors) {
+        doctorsData.doctors.forEach((doctor: any) => {
+          doctorsMap.set(doctor.id, {
+            id: doctor.id,
+            name: doctor.name,
+            speciality: doctor.speciality,
+            image: doctor.image
+          })
+        })
+      }
+      setDoctors(doctorsMap)
+      
+      // Fetch bookings from API
+      const response = await fetch('/api/bookings')
+      const data = await response.json()
+      
+      if (data.bookings) {
+        // Filter by user email if available
+        let userBookings = data.bookings as Booking[]
+        if (userEmail) {
+          userBookings = userBookings.filter((b: Booking) => b.patientEmail === userEmail)
+        }
+
+        // Transform bookings to match Appointment interface
+        const transformedAppointments: Appointment[] = userBookings.map((booking: Booking) => {
+          // Determine status based on booking status
+          let status: 'upcoming' | 'completed' | 'canceled' = 'upcoming'
+          if (booking.status === 'confirmed') {
+            // Check if appointment date has passed
+            const appointmentDate = new Date(`${booking.date} ${booking.time}`)
+            const now = new Date()
+            status = appointmentDate < now ? 'completed' : 'upcoming'
+          } else if (booking.status === 'completed') {
+            status = 'completed'
+          } else if (booking.status === 'cancelled') {
+            status = 'canceled'
+          }
+
+          // Get doctor info from the map
+          const doctorInfo = doctorsMap.get(booking.doctorId)
+
+          return {
+            id: booking.id,
+            doctor: {
+              id: booking.doctorId,
+              name: booking.doctorName,
+              speciality: booking.speciality,
+              image: doctorInfo?.image
+            },
+            date: formatDate(booking.date),
+            time: formatTime(booking.time),
+            status,
+            paymentStatus: booking.paymentStatus || 'not_paid',
+            summaryAvailable: status === 'completed',
+            price: booking.price
+          }
+        })
+
+        setAppointments(transformedAppointments)
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error)
+      setAppointments([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Format date to readable format
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const options: Intl.DateTimeFormatOptions = { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }
+    return date.toLocaleDateString('en-US', options)
+  }
+
+  // Format time to 12-hour format
+  const formatTime = (timeString: string) => {
+    if (timeString.includes('AM') || timeString.includes('PM')) {
+      return timeString
+    }
+    
+    const [hours, minutes] = timeString.split(':').map(Number)
+    const period = hours >= 12 ? 'PM' : 'AM'
+    const displayHours = hours % 12 || 12
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
+  }
+
+  // Handle payment button click
+  const handlePaymentClick = (appointment: Appointment) => {
+    setSelectedAppointment(appointment)
+    setShowPaymentModal(true)
+  }
+
+  // Handle cancel button click
+  const handleCancelClick = (appointment: Appointment) => {
+    setSelectedAppointment(appointment)
+    setShowCancelModal(true)
+  }
+
+  // Handle payment modal close
+  const closePaymentModal = () => {
+    setShowPaymentModal(false)
+    setSelectedAppointment(null)
+  }
+
+  // Handle cancel modal close
+  const closeCancelModal = () => {
+    setShowCancelModal(false)
+    setSelectedAppointment(null)
+  }
+
+  // Cancel appointment
+  const cancelAppointment = async () => {
+    if (!selectedAppointment) return
+
+    setCancellingAppointment(true)
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: selectedAppointment.id,
+          status: 'cancelled'
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Refresh appointments
+        await fetchAppointments()
+        closeCancelModal()
+        
+        // Show success message (optional)
+        alert('Appointment cancelled successfully')
+      } else {
+        alert('Failed to cancel appointment. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error cancelling appointment:', error)
+      alert('An error occurred. Please try again.')
+    } finally {
+      setCancellingAppointment(false)
+    }
+  }
 
   const filtered = appointments.filter(a => a.status === tab)
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-     <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
-  <div className="px-4 sm:px-6 py-4">
-    <div className="flex items-center">
-      <button
-        onClick={() => history.back()}
-        className="p-2 hover:bg-white/20 rounded-full transition-colors"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
-      <h1 className="ml-3 text-lg sm:text-xl font-bold">Appointments</h1>
-    </div>
-  </div>
-  {/* Tabs inside gradient for a seamless look */}
-  <div className="flex border-b border-[#91C8E4] bg-linear-to-r from-[#91C8E4] to-[#4682A9]">
-    {TABS.map(tabOption => (
-      <button
-        key={tabOption.value}
-        className={`flex-1 py-2 text-center text-md font-medium capitalize transition
-          ${tab === tabOption.value
-            ? 'text-white border-b-2 border-white'
-            : 'text-white/70 border-b-2 border-transparent'
-          }`}
-        onClick={() => setTab(tabOption.value as any)}
-      >
-        {tabOption.label}
-      </button>
-    ))}
-  </div>
-</header>
+      <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
+        <div className="px-4 sm:px-6 py-4">
+          <div className="flex items-center">
+            <Link href="/user/dashboard">
+              <button className="p-2 hover:bg-white/20 rounded-full transition-colors">
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            </Link>
+            <h1 className="ml-3 text-lg sm:text-xl font-bold">Appointments</h1>
+          </div>
+        </div>
+        {/* Tabs */}
+        <div className="flex border-b border-[#91C8E4] bg-linear-to-r from-[#91C8E4] to-[#4682A9]">
+          {TABS.map(tabOption => (
+            <button
+              key={tabOption.value}
+              className={`flex-1 py-2 text-center text-md font-medium capitalize transition
+                ${tab === tabOption.value
+                  ? 'text-white border-b-2 border-white'
+                  : 'text-white/70 border-b-2 border-transparent'
+                }`}
+              onClick={() => setTab(tabOption.value as any)}
+            >
+              {tabOption.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
       {/* Appointments List */}
       <div className="flex-1 px-3 py-5">
@@ -88,7 +267,7 @@ export default function AppointmentHistoryPage() {
             <div className="w-12 h-12 border-4 border-[#91C8E4] border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : filtered.length === 0 ? (
-          // Empty state like your screen
+          // Empty state
           <div className="flex flex-col items-center justify-center h-[60vh]">
             <svg width={120} height={120} fill="none" viewBox="0 0 120 120">
               <rect x="15" y="40" width="65" height="70" fill="#E7F6FD" rx="6" />
@@ -112,71 +291,302 @@ export default function AppointmentHistoryPage() {
         ) : (
           <div className="space-y-4">
             {filtered.map(appt => (
-              <div key={appt.id} className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col shadow md:flex-row md:justify-between md:items-center">
-                <div className="flex items-center">
-                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-[#91C8E4] flex items-center justify-center mr-4">
-                    {appt.doctor.image ? (
-                      <Image
-                        src={appt.doctor.image}
-                        alt={appt.doctor.name}
-                        width={56}
-                        height={56}
-                        className="object-cover"
-                      />
-                    ) : (
-                      <span className="text-white font-medium text-2xl">
-                        {appt.doctor.name.split(' ').map(w=>w[0]).join('')}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <h2 className="text-md font-bold text-gray-900">{appt.doctor.name}</h2>
-                    <div className="text-xs text-[#4FC3F7] mb-1">{appt.doctor.speciality}</div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>{appt.date} | <span className="font-semibold" style={{ color: "#4682A9" }}>{appt.time}</span></span>
-                      <span className="ml-2">Payment: <span className={`font-semibold ${appt.paymentStatus === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
-                        {appt.paymentStatus === 'paid' ? 'Paid' : 'Not paid'}
-                      </span></span>
+              <div key={appt.id} className="rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                {/* Card Content */}
+                <div className="p-5">
+                  {/* Top Section: Doctor Info + Payment Status */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center flex-1">
+                      {/* Doctor Image */}
+                      <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#91C8E4] flex items-center justify-center mr-4 shrink-0">
+                        {appt.doctor.image ? (
+                          <Image
+                            src={appt.doctor.image}
+                            alt={appt.doctor.name}
+                            width={80}
+                            height={80}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <span className="text-white font-bold text-2xl">
+                            {appt.doctor.name.split(' ').map(w=>w[0]).join('')}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Doctor Details */}
+                      <div className="flex-1">
+                        <h2 className="text-lg font-bold text-gray-900 mb-1">{appt.doctor.name}</h2>
+                        <p className="text-sm text-[#4FC3F7] mb-2">{appt.doctor.speciality}</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            📅 {appt.date}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            🕐 <span className="font-semibold text-[#4682A9]">{appt.time}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment Status Badge + Menu */}
+                    <div className="flex items-start gap-2">
+                      <div className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${
+                        appt.paymentStatus === 'paid' 
+                          ? 'bg-green-50 text-green-600 border border-green-200' 
+                          : 'bg-red-50 text-red-600 border border-red-200'
+                      }`}>
+                          {appt.paymentStatus === 'paid' ? '✓ Paid' : '✗ Not paid'}
+                      </div>
+                      <button className="p-2 hover:bg-gray-100 rounded-full transition">
+                        <MoreVertical className="w-5 h-5 text-gray-400" />
+                      </button>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2 mt-4 md:mt-0">
-                  {tab === 'upcoming' && (
-                    <>
-                      <Link href={`/appointments/${appt.id}`}>
-                        <button className="px-4 py-2 bg-[#91C8E4] text-white rounded-xl font-semibold text-xs shadow hover:bg-[#749BC2]">
-                          View
-                        </button>
-                      </Link>
-                      {appt.paymentStatus === 'not_paid' && (
-                        <button className="px-4 py-2 bg-[#91C8E4]/20 text-[#4682A9] rounded-xl font-semibold text-xs border border-[#91C8E4] ml-2">
-                          Make Payment
-                        </button>
-                      )}
-                    </>
+
+                  {/* Fee */}
+                  {appt.price && (
+                    <div className="text-sm font-bold text-gray-900 mb-4">
+                      Fee: ₹{appt.price}
+                    </div>
                   )}
-                  {tab === 'completed' && appt.summaryAvailable && (
-                    <Link href={`/appointment-summary/${appt.id}`}>
-                      <button className="px-4 py-2 bg-[#91C8E4] text-white rounded-xl font-semibold text-xs shadow hover:bg-[#749BC2]">
-                        View Summary
-                      </button>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-3">
+                    {tab === 'upcoming' && (
+                      <>
+                        <Link href={`/user/doctors/${appt.doctor.id}`} className="flex-1">
+                          <button className="w-full px-4 py-2.5 bg-[#91C8E4] text-white rounded-xl font-semibold text-sm shadow hover:bg-[#749BC2] transition-all">
+                            View Profile
+                          </button>
+                        </Link>
+                        {appt.paymentStatus === 'not_paid' && (
+                          <button 
+                            onClick={() => handlePaymentClick(appt)}
+                            className="flex-1 px-4 py-2.5 bg-white text-[#4682A9] rounded-xl font-semibold text-sm border-2 border-[#91C8E4] hover:bg-[#91C8E4]/10 transition-all flex items-center justify-center gap-2"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                            Pay Now
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => handleCancelClick(appt)}
+                          className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl font-semibold text-sm border-2 border-red-200 hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                    {tab === 'completed' && (
+                      <>
+                        <Link href={`/user/doctors/${appt.doctor.id}`} className="flex-1">
+                          <button className="w-full px-4 py-2.5 bg-[#91C8E4]/20 text-[#4682A9] rounded-xl font-semibold text-sm border border-[#91C8E4] hover:bg-[#91C8E4]/30 transition-all">
+                            View Profile
+                          </button>
+                        </Link>
+                        {appt.summaryAvailable && (
+                          <Link href={`/appointment-summary/${appt.id}`} className="flex-1">
+                            <button className="w-full px-4 py-2.5 bg-[#91C8E4] text-white rounded-xl font-semibold text-sm shadow hover:bg-[#749BC2] transition-all">
+                              View Summary
+                            </button>
+                          </Link>
+                        )}
+                      </>
+                    )}
+                    {tab === 'canceled' && (
+                    <Link href={`/user/doctors/${appt.doctor.id}?from=cancelled`} className="flex-1">
+                    <button className="w-full px-4 py-2.5 bg-[#91C8E4] text-white rounded-xl font-semibold text-sm shadow hover:bg-[#749BC2] transition-all">
+                    Rebook
+                   </button>
                     </Link>
-                  )}
-                  {/* Add more tab specific actions here */}
-                  <button className="ml-2 p-2 rounded-full hover:bg-gray-100 transition">
-                    <MoreVertical className="w-5 h-5 text-gray-400" />
-                  </button>
+          )}
+
+                  </div>
                 </div>
+
+                {/* Bottom Info Banner - Only for upcoming */}
                 {tab === 'upcoming' && (
-                  <p className="text-xs text-gray-400 mt-3 ml-1">
-                    Reduce your waiting time and visiting time by paying the consulting fee upfront
-                  </p>
+                  <div className="px-5 py-3 bg-linear-to-r from-[#FFFBDE] to-[#FFF9E6] border-t border-gray-100 rounded-b-2xl">
+                    <p className="text-xs text-[#4682A9] flex items-center gap-2">
+                      <span className="text-base">💡</span>
+                      <span>Reduce your waiting time and visiting time by paying the consulting fee upfront</span>
+                    </p>
+                  </div>
                 )}
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedAppointment && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-[#2C5F7C]">Payment Details</h3>
+              <button
+                onClick={closePaymentModal}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Appointment Details */}
+            <div className="bg-linear-to-r from-[#91C8E4]/10 to-[#4682A9]/10 rounded-xl p-4 mb-6 border border-[#91C8E4]/20">
+              <div className="flex items-center mb-3">
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#91C8E4] flex items-center justify-center mr-3">
+                  {selectedAppointment.doctor.image ? (
+                    <Image
+                      src={selectedAppointment.doctor.image}
+                      alt={selectedAppointment.doctor.name}
+                      width={48}
+                      height={48}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <span className="text-white font-medium text-lg">
+                      {selectedAppointment.doctor.name.split(' ').map(w=>w[0]).join('')}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-bold text-[#2C5F7C]">{selectedAppointment.doctor.name}</h4>
+                  <p className="text-xs text-[#4682A9]">{selectedAppointment.doctor.speciality}</p>
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-[#91C8E4]/20">
+                <span className="text-sm text-[#4682A9]">
+                  {selectedAppointment.date} at {selectedAppointment.time}
+                </span>
+              </div>
+            </div>
+
+            {/* Amount */}
+            <div className="bg-[#FFFBDE] rounded-xl p-4 mb-6 border border-[#91C8E4]/20">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[#4682A9]">Consultation Fee</span>
+                <span className="font-semibold text-[#2C5F7C]">₹{selectedAppointment.price}</span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-[#91C8E4]/20">
+                <span className="font-bold text-[#2C5F7C]">Total Amount</span>
+                <span className="text-xl font-bold text-[#2C5F7C]">₹{selectedAppointment.price}</span>
+              </div>
+            </div>
+
+            {/* Payment Options */}
+            <div className="space-y-3 mb-6">
+              <p className="text-sm font-semibold text-[#4682A9] mb-3">Choose Payment Method</p>
+              
+              <Link href={`/user/payment?appointmentId=${selectedAppointment.id}&amount=${selectedAppointment.price}&doctorName=${encodeURIComponent(selectedAppointment.doctor.name)}`}>
+                <button className="w-full px-4 py-3 bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Proceed to Payment
+                </button>
+              </Link>
+            </div>
+
+            <button
+              onClick={closePaymentModal}
+              className="w-full px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Appointment Modal */}
+      {showCancelModal && selectedAppointment && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-red-600">Cancel Appointment</h3>
+              <button
+                onClick={closeCancelModal}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <XCircle className="w-10 h-10 text-red-600" />
+              </div>
+            </div>
+
+            {/* Appointment Details */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200">
+              <div className="flex items-center mb-3">
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#91C8E4] flex items-center justify-center mr-3">
+                  {selectedAppointment.doctor.image ? (
+                    <Image
+                      src={selectedAppointment.doctor.image}
+                      alt={selectedAppointment.doctor.name}
+                      width={48}
+                      height={48}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <span className="text-white font-medium text-lg">
+                      {selectedAppointment.doctor.name.split(' ').map(w=>w[0]).join('')}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900">{selectedAppointment.doctor.name}</h4>
+                  <p className="text-xs text-gray-600">{selectedAppointment.doctor.speciality}</p>
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                <span className="text-sm text-gray-600">
+                  {selectedAppointment.date} at {selectedAppointment.time}
+                </span>
+              </div>
+            </div>
+
+            {/* Warning Message */}
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+              <p className="text-sm text-red-800 text-center">
+                Are you sure you want to cancel this appointment? This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={closeCancelModal}
+                disabled={cancellingAppointment}
+                className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all disabled:opacity-50"
+              >
+                Keep Appointment
+              </button>
+              <button
+                onClick={cancelAppointment}
+                disabled={cancellingAppointment}
+                className="flex-1 px-4 py-3 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {cancellingAppointment ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Cancelling...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-5 h-5" />
+                    Yes, Cancel
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <BottomNavigation activeTab="appointments" />
     </div>
   )

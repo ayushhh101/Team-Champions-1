@@ -453,49 +453,42 @@
   ],
   "bookings": [
     {
-      "id": "1761660552800",
+      "id": "1761713253213",
       "doctorId": "doc3",
       "doctorName": "Dr. Amit Patel",
       "speciality": "Pediatrician",
-      "date": "2025-10-28",
-      "time": "09:30",
-      "patientName": "sarah williams",
-      "patientPhone": "+91-9876543212",
-      "patientEmail": "sarah.williams@email.com",
+      "date": "2025-11-09",
+      "time": "12:30",
+      "patientName": "ds",
+      "patientPhone": "+91-9876543211",
+      "patientEmail": "john.smith@email.com",
       "notes": "",
       "price": 1200,
       "status": "confirmed",
-      "createdAt": "2025-10-28T14:09:12.800Z"
+      "createdAt": "2025-10-29T04:47:33.213Z",
+      "updatedAt": "2025-10-29T12:28:42.677Z"
+    }
+  ],
+  "appointments": [
+    {
+      "id": "apt1",
+      "patientId": "patient1",
+      "patientName": "John Doe",
+      "doctorId": "doc3",
+      "date": "2025-10-29",
+      "time": "10:00 AM",
+      "type": "General Checkup",
+      "status": "upcoming"
     },
     {
-      "id": "1761668749202",
-      "doctorId": "doc1",
-      "doctorName": "Dr. Rajesh Kumar",
-      "speciality": "Cardiologist",
-      "date": "2025-10-28",
-      "time": "09:00",
-      "patientName": "john smith",
-      "patientPhone": "+91-9876543211",
-      "patientEmail": "john.smith@email.com",
-      "notes": "",
-      "price": 2000,
-      "status": "confirmed",
-      "createdAt": "2025-10-28T16:25:49.202Z"
-    },
-    {
-      "id": "1761670536301",
-      "doctorId": "doc7",
-      "doctorName": "Dr. Vikram Rao",
-      "speciality": "Cardiologist",
-      "date": "2025-10-27",
-      "time": "15:30",
-      "patientName": "Debasmita Sarkar",
-      "patientPhone": "+91-9876543211",
-      "patientEmail": "john.smith@email.com",
-      "notes": "",
-      "price": 1850,
-      "status": "confirmed",
-      "createdAt": "2025-10-28T16:55:36.301Z"
+      "id": "apt2",
+      "patientId": "patient2",
+      "patientName": "Sarah Wilson",
+      "doctorId": "doc3",
+      "date": "2025-10-29",
+      "time": "02:30 PM",
+      "type": "Follow-up",
+      "status": "upcoming"
     }
   ]
 }
