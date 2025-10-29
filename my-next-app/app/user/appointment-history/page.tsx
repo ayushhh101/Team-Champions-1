@@ -60,18 +60,18 @@ export default function AppointmentHistoryPage() {
 
   useEffect(() => {
     fetchAppointments()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchAppointments = async () => {
     try {
       // Get user email from localStorage
       const userEmail = localStorage.getItem('userEmail')
-      
+
       // Fetch doctors data first
       const doctorsResponse = await fetch('/api/doctors')
       const doctorsData = await doctorsResponse.json()
-      
+
       // Create a map of doctors by ID for quick lookup
       const doctorsMap = new Map<string, Doctor>()
       if (doctorsData.doctors) {
@@ -85,11 +85,11 @@ export default function AppointmentHistoryPage() {
         })
       }
       setDoctors(doctorsMap)
-      
+
       // Fetch bookings from API
       const response = await fetch('/api/bookings')
       const data = await response.json()
-      
+
       if (data.bookings) {
         // Filter by user email if available
         let userBookings = data.bookings as Booking[]
@@ -145,10 +145,10 @@ export default function AppointmentHistoryPage() {
   // Format date to readable format
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    const options: Intl.DateTimeFormatOptions = { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     }
     return date.toLocaleDateString('en-US', options)
   }
@@ -158,7 +158,7 @@ export default function AppointmentHistoryPage() {
     if (timeString.includes('AM') || timeString.includes('PM')) {
       return timeString
     }
-    
+
     const [hours, minutes] = timeString.split(':').map(Number)
     const period = hours >= 12 ? 'PM' : 'AM'
     const displayHours = hours % 12 || 12
@@ -212,7 +212,7 @@ export default function AppointmentHistoryPage() {
         // Refresh appointments
         await fetchAppointments()
         closeCancelModal()
-        
+
         // Show success message (optional)
         alert('Appointment cancelled successfully')
       } else {
@@ -231,26 +231,26 @@ export default function AppointmentHistoryPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
+      <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200/50">
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center">
             <Link href="/user/dashboard">
-              <button className="p-2 hover:bg-white/20 rounded-full transition-colors">
-                <ChevronLeft className="w-6 h-6" />
+              <button className="p-2 hover:bg-[#91C8E4]/10 rounded-full transition-all duration-200">
+                <ChevronLeft className="w-6 h-6 text-[#4682A9]" />
               </button>
             </Link>
-            <h1 className="ml-3 text-lg sm:text-xl font-bold">Appointments</h1>
+            <h1 className="ml-3 text-lg sm:text-xl font-bold text-white">Appointments</h1>
           </div>
         </div>
         {/* Tabs */}
-        <div className="flex border-b border-[#91C8E4] bg-linear-to-r from-[#91C8E4] to-[#4682A9]">
+        <div className="flex border-b border-[#91C8E4]/20 bg-white">
           {TABS.map(tabOption => (
             <button
               key={tabOption.value}
-              className={`flex-1 py-2 text-center text-md font-medium capitalize transition
-                ${tab === tabOption.value
-                  ? 'text-white border-b-2 border-white'
-                  : 'text-white/70 border-b-2 border-transparent'
+              className={`flex-1 py-3 text-center text-sm font-semibold capitalize transition-all duration-300
+          ${tab === tabOption.value
+                  ? 'text-[#4682A9] border-b-3 border-[#4682A9] bg-[#91C8E4]/5'
+                  : 'text-[#4682A9]/60 border-b-2 border-transparent hover:text-[#4682A9] hover:bg-[#91C8E4]/5'
                 }`}
               onClick={() => setTab(tabOption.value as any)}
             >
@@ -259,6 +259,7 @@ export default function AppointmentHistoryPage() {
           ))}
         </div>
       </header>
+
 
       {/* Appointments List */}
       <div className="flex-1 px-3 py-5">
@@ -309,34 +310,40 @@ export default function AppointmentHistoryPage() {
                           />
                         ) : (
                           <span className="text-white font-bold text-2xl">
-                            {appt.doctor.name.split(' ').map(w=>w[0]).join('')}
+                            {appt.doctor.name.split(' ').map(w => w[0]).join('')}
                           </span>
                         )}
                       </div>
-                      
+
                       {/* Doctor Details */}
                       <div className="flex-1">
-                        <h2 className="text-lg font-bold text-gray-900 mb-1">{appt.doctor.name}</h2>
-                        <p className="text-sm text-[#4FC3F7] mb-2">{appt.doctor.speciality}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <span className="flex items-center gap-1">
-                            📅 {appt.date}
+                        <h2 className="text-lg font-bold text-[#2C5F7C] mb-1">{appt.doctor.name}</h2>
+                        <p className="text-sm font-semibold text-[#4682A9] mb-3">{appt.doctor.speciality}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-[#4682A9]">
+                          <span className="inline-flex items-center gap-1.5 bg-[#91C8E4]/10 px-3 py-1.5 rounded-lg font-medium">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {appt.date}
                           </span>
-                          <span className="flex items-center gap-1">
-                            🕐 <span className="font-semibold text-[#4682A9]">{appt.time}</span>
+                          <span className="inline-flex items-center gap-1.5 bg-[#FFFBDE] px-3 py-1.5 rounded-lg">
+                            <svg className="w-4 h-4 text-[#4682A9]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-bold text-[#4682A9]">{appt.time}</span>
                           </span>
                         </div>
                       </div>
+
                     </div>
 
                     {/* Payment Status Badge + Menu */}
                     <div className="flex items-start gap-2">
-                      <div className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${
-                        appt.paymentStatus === 'paid' 
-                          ? 'bg-green-50 text-green-600 border border-green-200' 
-                          : 'bg-red-50 text-red-600 border border-red-200'
-                      }`}>
-                          {appt.paymentStatus === 'paid' ? '✓ Paid' : '✗ Not paid'}
+                      <div className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${appt.paymentStatus === 'paid'
+                        ? 'bg-green-50 text-green-600 border border-green-200'
+                        : 'bg-red-50 text-red-600 border border-red-200'
+                        }`}>
+                        {appt.paymentStatus === 'paid' ? '✓ Paid' : '✗ Not paid'}
                       </div>
                       <button className="p-2 hover:bg-gray-100 rounded-full transition">
                         <MoreVertical className="w-5 h-5 text-gray-400" />
@@ -356,64 +363,69 @@ export default function AppointmentHistoryPage() {
                     {tab === 'upcoming' && (
                       <>
                         <Link href={`/user/doctors/${appt.doctor.id}`} className="flex-1">
-                          <button className="w-full px-4 py-2.5 bg-[#91C8E4] text-white rounded-xl font-semibold text-sm shadow hover:bg-[#749BC2] transition-all">
+                          <button className="w-full px-4 py-3 bg-[#91C8E4]/10 hover:bg-[#91C8E4]/20 text-[#4682A9] rounded-xl font-semibold text-sm border-2 border-[#91C8E4]/30 hover:border-[#91C8E4]/50 transition-all duration-300 shadow-sm hover:shadow-md">
                             View Profile
                           </button>
                         </Link>
                         {appt.paymentStatus === 'not_paid' && (
-                          <button 
+                          <button
                             onClick={() => handlePaymentClick(appt)}
-                            className="flex-1 px-4 py-2.5 bg-white text-[#4682A9] rounded-xl font-semibold text-sm border-2 border-[#91C8E4] hover:bg-[#91C8E4]/10 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 px-4 py-3 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white rounded-xl font-semibold text-sm transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 transform hover:scale-[1.02]"
                           >
                             <CreditCard className="w-4 h-4" />
                             Pay Now
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={() => handleCancelClick(appt)}
-                          className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl font-semibold text-sm border-2 border-red-200 hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                          className="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-semibold text-sm border-2 border-red-200 hover:border-red-300 transition-all duration-300 flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
                         >
                           <XCircle className="w-4 h-4" />
                           Cancel
                         </button>
                       </>
                     )}
+
                     {tab === 'completed' && (
-                      <>
-                        <Link href={`/user/doctors/${appt.doctor.id}`} className="flex-1">
-                          <button className="w-full px-4 py-2.5 bg-[#91C8E4]/20 text-[#4682A9] rounded-xl font-semibold text-sm border border-[#91C8E4] hover:bg-[#91C8E4]/30 transition-all">
-                            View Profile
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Link href={`/user/feedback/${appt.id}?doctorId=${appt.doctor.id}&doctorName=${encodeURIComponent(appt.doctor.name)}&speciality=${encodeURIComponent(appt.doctor.speciality)}&date=${encodeURIComponent(appt.date)}&time=${encodeURIComponent(appt.time)}`}
+                          className="flex-1 min-w-[140px]"
+                        >
+                          <button className="w-full px-4 py-3 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02]">
+                            Give Feedback
                           </button>
                         </Link>
                         {appt.summaryAvailable && (
-                          <Link href={`/appointment-summary/${appt.id}`} className="flex-1">
-                            <button className="w-full px-4 py-2.5 bg-[#91C8E4] text-white rounded-xl font-semibold text-sm shadow hover:bg-[#749BC2] transition-all">
+                          <Link href={`/appointment-summary/${appt.id}`} className="flex-1 min-w-[140px]">
+                            <button className="w-full px-4 py-3 bg-[#FFFBDE] hover:bg-[#FFF9E6] text-[#4682A9] border-2 border-[#91C8E4]/30 rounded-xl font-semibold text-sm shadow-sm hover:shadow-md transition-all duration-300">
                               View Summary
                             </button>
                           </Link>
                         )}
-                      </>
+                      </div>
                     )}
+
                     {tab === 'canceled' && (
-                    <Link href={`/user/doctors/${appt.doctor.id}?from=cancelled`} className="flex-1">
-                    <button className="w-full px-4 py-2.5 bg-[#91C8E4] text-white rounded-xl font-semibold text-sm shadow hover:bg-[#749BC2] transition-all">
-                    Rebook
-                   </button>
-                    </Link>
-          )}
+                      <Link href={`/user/doctors/${appt.doctor.id}?from=cancelled`} className="flex-1">
+                        <button className="w-full px-4 py-2.5 bg-[#91C8E4] text-white rounded-xl font-semibold text-sm shadow hover:bg-[#749BC2] transition-all">
+                          Rebook
+                        </button>
+                      </Link>
+                    )}
 
                   </div>
                 </div>
 
                 {/* Bottom Info Banner - Only for upcoming */}
                 {tab === 'upcoming' && (
-                  <div className="px-5 py-3 bg-linear-to-r from-[#FFFBDE] to-[#FFF9E6] border-t border-gray-100 rounded-b-2xl">
+                  <div className="px-5 py-3 bg-linear-to-r from-[#FFFBDE] to-[#FFF9E6] border-t border-[#91C8E4]/20 rounded-b-2xl">
                     <p className="text-xs text-[#4682A9] flex items-center gap-2">
                       <span className="text-base">💡</span>
-                      <span>Reduce your waiting time and visiting time by paying the consulting fee upfront</span>
+                      <span className="font-medium">Tip: Pay upfront to reduce waiting time at the clinic</span>
                     </p>
                   </div>
                 )}
+
               </div>
             ))}
           </div>
@@ -423,12 +435,12 @@ export default function AppointmentHistoryPage() {
       {/* Payment Modal */}
       {showPaymentModal && selectedAppointment && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all animate-in fade-in zoom-in duration-300">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-[#2C5F7C]">Payment Details</h3>
+              <h3 className="text-xl font-bold text-[#2C5F7C]">Complete Payment</h3>
               <button
                 onClick={closePaymentModal}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -448,7 +460,7 @@ export default function AppointmentHistoryPage() {
                     />
                   ) : (
                     <span className="text-white font-medium text-lg">
-                      {selectedAppointment.doctor.name.split(' ').map(w=>w[0]).join('')}
+                      {selectedAppointment.doctor.name.split(' ').map(w => w[0]).join('')}
                     </span>
                   )}
                 </div>
@@ -479,13 +491,14 @@ export default function AppointmentHistoryPage() {
             {/* Payment Options */}
             <div className="space-y-3 mb-6">
               <p className="text-sm font-semibold text-[#4682A9] mb-3">Choose Payment Method</p>
-              
+
               <Link href={`/user/payment?appointmentId=${selectedAppointment.id}&amount=${selectedAppointment.price}&doctorName=${encodeURIComponent(selectedAppointment.doctor.name)}`}>
-                <button className="w-full px-4 py-3 bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                <button className="w-full px-4 py-3.5 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center gap-2">
                   <CreditCard className="w-5 h-5" />
                   Proceed to Payment
                 </button>
               </Link>
+
             </div>
 
             <button
@@ -533,7 +546,7 @@ export default function AppointmentHistoryPage() {
                     />
                   ) : (
                     <span className="text-white font-medium text-lg">
-                      {selectedAppointment.doctor.name.split(' ').map(w=>w[0]).join('')}
+                      {selectedAppointment.doctor.name.split(' ').map(w => w[0]).join('')}
                     </span>
                   )}
                 </div>

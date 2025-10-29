@@ -464,9 +464,25 @@
       "patientEmail": "john.smith@email.com",
       "notes": "",
       "price": 1200,
-      "status": "confirmed",
+      "status": "completed",
       "createdAt": "2025-10-29T04:47:33.213Z",
       "updatedAt": "2025-10-29T12:28:42.677Z"
+    },
+    {
+      "id": "1761746399258",
+      "doctorId": "doc3",
+      "doctorName": "Dr. Amit Patel",
+      "speciality": "Pediatrician",
+      "date": "2025-11-01",
+      "time": "11:30",
+      "patientName": "Ayush Sawant",
+      "patientPhone": "+91-9876543211",
+      "patientEmail": "john.smith@email.com",
+      "notes": "",
+      "price": 1200,
+      "status": "confirmed",
+      "createdAt": "2025-10-29T13:59:59.258Z",
+      "paymentStatus": "not_paid"
     }
   ],
   "appointments": [
