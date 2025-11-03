@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -26,6 +27,164 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 
+// Mini Calendar Component
+interface MiniCalendarProps {
+  appointments: Booking[];
+  onDateSelect: (date: Date) => void;
+}
+
+const MiniCalendar: React.FC<MiniCalendarProps> = ({ appointments, onDateSelect }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // Helper function to convert date to local YYYY-MM-DD string (without timezone conversion)
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
+    
+    const days: Date[] = [];
+    for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
+      const day = new Date(startDate);
+      day.setDate(startDate.getDate() + i);
+      days.push(day);
+    }
+    return days;
+  };
+
+
+   const getAppointmentCountForDate = (date: Date) => {
+    const dateStr = getLocalDateString(date);
+    return appointments.filter(apt => apt.date === dateStr).length;
+  };
+
+   const getAppointmentStatusForDate = (date: Date) => {
+    const dateStr = getLocalDateString(date);
+    const dayAppointments = appointments.filter(apt => apt.date === dateStr);
+    if (dayAppointments.length === 0) return null;
+    
+    const hasConfirmed = dayAppointments.some(apt => apt.status === 'confirmed');
+    const hasCompleted = dayAppointments.some(apt => apt.status === 'completed');
+    const hasCancelled = dayAppointments.some(apt => apt.status === 'cancelled');
+    
+    if (hasConfirmed) return 'confirmed';
+    if (hasCompleted) return 'completed';
+    if (hasCancelled) return 'cancelled';
+    return null;
+  };
+
+  
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  const isCurrentMonth = (date: Date) => {
+    return date.getMonth() === currentDate.getMonth();
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(prev.getMonth() + (direction === 'next' ? 1 : -1));
+      return newDate;
+    });
+  };
+
+  const days = getDaysInMonth(currentDate);
+  const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  return (
+    <div className="w-full">
+      {/* Header */}
+    <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-800 text-sm">
+          {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </h3>
+        <div className="flex space-x-1">
+          <button
+            onClick={() => navigateMonth('prev')}
+            className="p-1 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-800"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={() => navigateMonth('next')}
+            className="p-1 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-800"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+        </div>
+
+      {/* Week Days */}
+     <div className="grid grid-cols-7 gap-1 mb-2">
+        {weekDays.map((day, index) => (
+          <div key={index} className="text-center text-xs font-medium text-gray-500 py-1">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar Days */}
+   <div className="grid grid-cols-7 gap-1">
+        {days.map((day, index) => {
+          const appointmentCount = getAppointmentCountForDate(day);
+          const appointmentStatus = getAppointmentStatusForDate(day);
+          const hasAppointments = appointmentCount > 0;
+          
+          const getStatusColor = (status: string | null) => {
+            switch (status) {
+              case 'confirmed': return 'bg-blue-500';
+              case 'completed': return 'bg-green-500';
+              case 'cancelled': return 'bg-red-500';
+              default: return 'bg-gray-400';
+            }
+          };
+          
+          return (
+            <button
+              key={index}
+              onClick={() => onDateSelect(day)}
+              className={`
+                relative p-2 text-xs rounded-lg transition-all hover:bg-blue-50
+                ${isCurrentMonth(day) ? 'text-gray-900' : 'text-gray-400'}
+                ${isToday(day) ? 'bg-blue-100 text-blue-900 font-semibold ring-2 ring-blue-200' : ''}
+                ${hasAppointments && isCurrentMonth(day) ? 'font-semibold' : ''}
+                hover:scale-105 hover:shadow-sm
+              `}
+            >
+              <span className="block">{day.getDate()}</span>
+              {hasAppointments && (
+                <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 flex items-center">
+                  <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(appointmentStatus)}`}></div>
+                  {appointmentCount > 1 && (
+                    <span className="absolute -top-2 left-1/2 transform -translate-x-1/2 text-[8px] font-bold text-white bg-blue-600 rounded-full w-3 h-3 flex items-center justify-center">
+                      {appointmentCount}
+                    </span>
+                  )}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 interface Booking {
   id: string;
   doctorId: string;
@@ -103,6 +262,7 @@ export default function DoctorAppointmentsPage() {
     newDate: string;
     newTime: string;
   } | null>(null);
+  const calendarRef = useRef<any>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -763,8 +923,113 @@ export default function DoctorAppointmentsPage() {
           </div>
         ) : (
           /* Calendar View */
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="p-6">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Mini Calendar Sidebar */}
+            <div className="w-full lg:w-80 space-y-4">
+              {/* Mini Calendar */}
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
+                <MiniCalendar 
+                  appointments={filteredAppointments}
+                  onDateSelect={(date: Date) => {
+                    // Navigate main calendar to selected date
+                    if (calendarRef.current) {
+                      calendarRef.current.getApi().gotoDate(date);
+                    }
+                  }}
+                />
+              </div>
+              
+              {/* Appointment Summary */}
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
+                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Quick Stats</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Total Today</span>
+                    <span className="text-sm font-semibold text-blue-600">
+                      {filteredAppointments.filter(apt => 
+                        apt.date === new Date().toISOString().split('T')[0]
+                      ).length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Confirmed</span>
+                    <span className="text-sm font-semibold text-green-600">
+                      {filteredAppointments.filter(apt => apt.status === 'confirmed').length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Completed</span>
+                    <span className="text-sm font-semibold text-gray-600">
+                      {filteredAppointments.filter(apt => apt.status === 'completed').length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Legend */}
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
+                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Status Legend</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-xs text-gray-600">Confirmed</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-gray-600">Completed</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <span className="text-xs text-gray-600">Cancelled</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4">
+                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Quick Actions</h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      const today = new Date();
+                      if (calendarRef.current) {
+                        calendarRef.current.getApi().gotoDate(today);
+                      }
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>Go to Today</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (calendarRef.current) {
+                        calendarRef.current.getApi().changeView('timeGridWeek');
+                      }
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <Clock className="w-4 h-4" />
+                    <span>Week View</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (calendarRef.current) {
+                        calendarRef.current.getApi().changeView('dayGridMonth');
+                      }
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    <span>Month View</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Calendar */}
+            <div className="flex-1 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+              <div className="p-6">
               <style jsx global>{`
                 .fc {
                   color: #000000 !important;
@@ -951,6 +1216,7 @@ export default function DoctorAppointmentsPage() {
                 }
               `}</style>
               <FullCalendar
+                ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
                 headerToolbar={{
@@ -1151,6 +1417,7 @@ export default function DoctorAppointmentsPage() {
                   }
                 }}
               />
+            </div>
             </div>
           </div>
         )}
