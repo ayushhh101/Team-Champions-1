@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Image from 'next/image'
-import { ChevronLeft, Calendar, User, Phone, Mail } from 'lucide-react'
+import { ChevronLeft, Calendar  as CalendarIcon, User, Phone, Mail,ChevronRight, Calendar} from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
 
@@ -32,6 +33,10 @@ export default function BookAppointmentPage() {
   const router = useRouter()
   const params = useParams()
   const doctorId = params.id as string
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [bookedDates, setBookedDates] = useState<string[]>([])
+
 
   const [doctor, setDoctor] = useState<Doctor | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
@@ -69,7 +74,31 @@ export default function BookAppointmentPage() {
 
     fetchDoctor()
   }, [doctorId, router])
+  useEffect(() => {
+  const fetchBookedDates = async () => {
+    if (!doctorId) return
+    
+    try {
+      const response = await fetch('/api/bookings')
+      const data = await response.json()
+      
+      if (data.success && data.bookings) {
+        const doctorBookings = data.bookings
+          .filter((booking: any) => 
+            booking.doctorId === doctorId && 
+            booking.status === 'confirmed'
+          )
+          .map((booking: any) => booking.date)
+        
+        setBookedDates(doctorBookings)
+      }
+    } catch (error) {
+      console.error('Error fetching booked dates:', error)
+    }
+  }
 
+  fetchBookedDates()
+}, [doctorId])
 //   const handleBookAppointment = () => {
 //   if (!selectedDate || !selectedTime || !patientName || !patientPhone) {
 //     toast.error('Please fill all required fields')
@@ -129,6 +158,108 @@ export default function BookAppointmentPage() {
 //     router.push(`/user/appointments?doctorId=${doctor?.id}&date=${selectedDate}&time=${selectedTime}&appointmentId=${appointment.id}`)
 //   }, 2000)
 // }
+// Calendar functions
+const getDaysInMonth = (date: Date) => {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const daysInMonth = lastDay.getDate()
+  const startingDayOfWeek = firstDay.getDay()
+  return { daysInMonth, startingDayOfWeek, year, month }
+}
+
+const isPastDate = (date: Date) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return date < today
+}
+
+const isDateBooked = (date: Date) => {
+  const dateString = date.toISOString().split('T')[0]
+  return bookedDates.includes(dateString)
+}
+
+const formatDateForDisplay = (date: Date) => {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short'
+  })
+}
+
+const handleDateSelect = (day: number) => {
+  const selectedDateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+  
+  if (isPastDate(selectedDateObj)) {
+    toast.error('Cannot select past dates')
+    return
+  }
+
+  if (isDateBooked(selectedDateObj)) {
+    toast.error('This date is already fully booked')
+    return
+  }
+
+  const dateString = selectedDateObj.toISOString().split('T')[0]
+  setSelectedDate(dateString)
+  setShowCalendar(false)
+}
+
+const renderCalendar = () => {
+  const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth)
+  const days = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  for (let i = 0; i < startingDayOfWeek; i++) {
+    days.push(<div key={`empty-${i}`} className="w-8 h-8"></div>)
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const currentDate = new Date(year, month, day)
+    const isPast = isPastDate(currentDate)
+    const isBooked = isDateBooked(currentDate)
+    const isSelected = selectedDate === currentDate.toISOString().split('T')[0]
+    const isToday = currentDate.toDateString() === today.toDateString()
+    const isDisabled = isPast || isBooked
+
+    days.push(
+      <button
+        key={day}
+        onClick={() => handleDateSelect(day)}
+        disabled={isDisabled}
+        type="button"
+        className={`w-8 h-8 flex items-center justify-center rounded-md text-xs font-medium transition-all relative ${
+          isDisabled
+            ? 'text-gray-300 cursor-not-allowed bg-gray-50'
+            : isSelected
+            ? 'bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white shadow-sm scale-105'
+            : isToday
+            ? 'bg-blue-50 text-[#4682A9] border border-[#91C8E4]'
+            : 'text-gray-700 hover:bg-[#91C8E4]/10 hover:text-[#4682A9]'
+        }`}
+      >
+        {day}
+        {isBooked && !isPast && (
+          <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-red-500 rounded-full"></div>
+        )}
+      </button>
+    )
+  }
+  return days
+}
+
+const changeMonth = (direction: 'prev' | 'next') => {
+  const newMonth = new Date(currentMonth)
+  if (direction === 'prev') {
+    newMonth.setMonth(newMonth.getMonth() - 1)
+  } else {
+    newMonth.setMonth(newMonth.getMonth() + 1)
+  }
+  setCurrentMonth(newMonth)
+}
+
 
 const handleBookAppointment = async () => {
   if (!selectedDate || !selectedTime || !patientName || !patientPhone) {
@@ -149,6 +280,7 @@ const handleBookAppointment = async () => {
     notes,
     price: doctor?.price,
     status: 'confirmed',
+    paymentStatus: 'not_paid',
     createdAt: new Date().toISOString()
   }
 
@@ -253,7 +385,8 @@ const handleBookAppointment = async () => {
                 {doctor.name}
               </h2>
               <p className="text-[#4682A9] font-semibold text-sm sm:text-base mb-2">
-                {doctor.qualification || 'MBBS, MS'} ({doctor.speciality})
+                {doctor.qualification || 'MBBS, MS'} 
+  
               </p>
               <p className="text-gray-600 text-sm mb-3">
                 {doctor.about || `Fellow of Cardiology with extensive and interventional experience`}
@@ -349,35 +482,78 @@ const handleBookAppointment = async () => {
           <h3 className="text-lg font-bold text-gray-900 mb-4">Appointment Details</h3>
 
           {/* Select Date */}
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Select Date *
-            </label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {doctor.availableDates?.slice(0, 5).map((date) => {
-                const dateObj = new Date(date)
-                const day = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
-                const dateNum = dateObj.getDate()
-                const month = dateObj.toLocaleDateString('en-US', { month: 'short' })
-                
-                return (
-                  <button
-                    key={date}
-                    onClick={() => setSelectedDate(date)}
-                    className={`p-3 rounded-lg border-2 transition-all text-center hover:shadow-md ${
-                      selectedDate === date
-                        ? 'border-[#4682A9] bg-[#91C8E4]/10 shadow-md'
-                        : 'border-gray-200 hover:border-[#91C8E4]'
-                    }`}
-                  >
-                    <p className="text-xs font-medium text-gray-600">{day}</p>
-                    <p className="text-lg font-bold text-[#4682A9]">{dateNum}</p>
-                    <p className="text-xs text-gray-500">{month}</p>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          {/* Select Date */}
+<div className="mb-4">
+  <label className="block text-sm font-semibold text-gray-700 mb-2">
+    Select Date *
+  </label>
+  
+  {/* Date Display Button */}
+  <button
+    type="button"
+    onClick={() => setShowCalendar(!showCalendar)}
+    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-left flex items-center justify-between hover:border-[#91C8E4] transition-colors focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] mb-2"
+  >
+    <div className="flex items-center space-x-3">
+      <CalendarIcon className="w-5 h-5 text-[#4682A9]" />
+      <span className={selectedDate ? 'text-gray-900 font-medium' : 'text-gray-500'}>
+        {selectedDate ? formatDateForDisplay(new Date(selectedDate)) : 'Select a date'}
+      </span>
+    </div>
+    <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${showCalendar ? 'rotate-90' : ''}`} />
+  </button>
+
+  {/* Calendar Dropdown */}
+  {/* Calendar Dropdown */}
+{showCalendar && (
+  <div className="p-2.5 border-2 border-gray-200 rounded-xl bg-white shadow-lg max-w-xs mx-auto">
+    {/* Calendar Header */}
+    <div className="flex items-center justify-between mb-2">
+      <button
+        type="button"
+        onClick={() => changeMonth('prev')}
+        className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+      >
+        <ChevronLeft className="w-3.5 h-3.5 text-gray-600" />
+      </button>
+      <h4 className="text-xs font-bold text-gray-900">
+        {currentMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+      </h4>
+      <button
+        type="button"
+        onClick={() => changeMonth('next')}
+        className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+      >
+        <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+      </button>
+    </div>
+
+    {/* Calendar Grid - Compact */}
+    <div className="grid grid-cols-7 gap-0.5">
+      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+        <div key={index} className="w-8 h-8 flex items-center justify-center text-[10px] font-semibold text-gray-500">
+          {day}
+        </div>
+      ))}
+      {renderCalendar()}
+    </div>
+
+    {/* Legend - Compact */}
+    <div className="mt-2 pt-2 border-t border-gray-200 flex items-center justify-center space-x-3 text-[10px]">
+      <div className="flex items-center space-x-1">
+        <div className="w-1.5 h-1.5 bg-linear-to-r from-[#91C8E4] to-[#4682A9] rounded-full"></div>
+        <span className="text-gray-600">Selected</span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <div className="w-1.5 h-1.5 bg-gray-200 rounded-full"></div>
+        <span className="text-gray-600">Booked/Past</span>
+      </div>
+    </div>
+  </div>
+)}
+
+</div>
+
 
           {/* Select Time */}
           <div className="mb-4">

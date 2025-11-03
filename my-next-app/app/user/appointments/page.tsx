@@ -1,6 +1,5 @@
 /* eslint-disable prefer-const */
- 
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -51,149 +50,176 @@ export default function AppointmentScheduledPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to generate unique numeric appointment ID
-  const generateNumericAppointmentId = (): string => {
-    const timestamp = Date.now().toString();
-    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return timestamp + randomNum;
-  };
-
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchOrCreateAppointment = async () => {
       try {
-        // Get parameters from URL
-        const doctorId = searchParams.get('doctorId');
-        const userId = searchParams.get('userId') || localStorage.getItem('userId');
-        const appointmentDate = searchParams.get('date');
-        const appointmentTime = searchParams.get('time');
-
-        console.log('URL Parameters:', {
-          doctorId,
-          userId,
-          appointmentDate,
-          appointmentTime
-        });
-
-        // If no doctorId in URL, try to get from sessionStorage or localStorage
-        const storedAppointmentData = sessionStorage.getItem('lastAppointment') || localStorage.getItem('lastAppointment');
+        // Check if appointment ID exists in URL (coming back to this page)
+        const appointmentId = searchParams.get('appointmentId');
         
-        let finalDoctorId = doctorId;
-        let finalDate = appointmentDate;
-        let finalTime = appointmentTime;
-
-        if (!finalDoctorId && storedAppointmentData) {
-          try {
-            const storedData = JSON.parse(storedAppointmentData);
-            finalDoctorId = storedData.doctorId || finalDoctorId;
-            finalDate = storedData.date || finalDate;
-            finalTime = storedData.time || finalTime;
-            console.log('Using stored appointment data:', storedData);
-          } catch (parseError) {
-            console.error('Error parsing stored appointment data:', parseError);
-          }
-        }
-
-        if (!finalDoctorId) {
-          setError('Doctor information is missing. Please book an appointment again.');
-          setIsLoading(false);
-          return;
-        }
-
-        // Fetch data from API
-        const response = await fetch('/api/doctors');
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
-
-        const data = await response.json();
-
-        // Find the specific doctor and user
-        const foundDoctor = data.doctors.find((d: Doctor) => d.id === finalDoctorId);
-        const foundUser = data.users.find((u: User) => u.id === userId) || data.users[0];
-
-        if (!foundDoctor) {
-          // If doctor not found, use the first doctor as fallback
-          const fallbackDoctor = data.doctors[0];
-          if (!fallbackDoctor) {
-            throw new Error('No doctors available');
-          }
-          setDoctor(fallbackDoctor);
-          console.warn('Requested doctor not found, using fallback doctor');
+        if (appointmentId) {
+          // Fetch existing appointment from backend
+          await fetchExistingAppointment(appointmentId);
         } else {
-          setDoctor(foundDoctor);
+          // Create new appointment in backend
+          await createNewAppointment();
         }
-
-        setUser(foundUser);
-
-        // Generate appointment data with numeric ID
-        const appointment: AppointmentData = {
-          id: generateNumericAppointmentId(),
-          status: "Confirmed",
-          date: finalDate || foundDoctor?.availableDates[0] || new Date().toISOString().split('T')[0],
-          time: finalTime || foundDoctor?.availableTimes[0] || '10:00 AM',
-          reportingTime: getReportingTime(
-            finalDate || foundDoctor?.availableDates[0] || new Date().toISOString().split('T')[0], 
-            finalTime || foundDoctor?.availableTimes[0] || '10:00 AM'
-          )
-        };
-
-        setAppointmentData(appointment);
-        
-        // Store appointment in localStorage for appointments page
-        if (foundDoctor) {
-          storeAppointmentInLocalStorage(appointment, foundDoctor, foundUser);
-        }
-
-        // Store in sessionStorage for recovery
-        sessionStorage.setItem('lastAppointment', JSON.stringify({
-          doctorId: finalDoctorId,
-          date: finalDate,
-          time: finalTime
-        }));
-
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error handling appointment:', error);
         setError('Failed to load appointment details. Please try again.');
-      } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
+    fetchOrCreateAppointment();
   }, [searchParams]);
 
-  function storeAppointmentInLocalStorage(appointment: AppointmentData, doctor: Doctor, user: User) {
+  const fetchExistingAppointment = async (appointmentId: string) => {
     try {
-      const storedAppointments = localStorage.getItem('userAppointments');
-      const appointments = storedAppointments ? JSON.parse(storedAppointments) : [];
-      
-      const newAppointment = {
-        id: appointment.id,
-        doctorId: doctor.id,
-        doctorName: doctor.name,
-        doctorSpeciality: doctor.speciality,
-        doctorImage: doctor.image,
-        date: appointment.date,
-        time: appointment.time,
-        status: appointment.status,
-        patientName: getUserName(user.email),
-        price: doctor.price,
+      // Fetch appointment from backend
+      const response = await fetch(`/api/bookings`);
+      const data = await response.json();
+
+      if (data.success && data.bookings) {
+        const booking = data.bookings.find((b: any) => b.id === appointmentId);
+        
+        if (booking) {
+          // Fetch doctor details
+          const doctorsResponse = await fetch('/api/doctors');
+          const doctorsData = await doctorsResponse.json();
+          const foundDoctor = doctorsData.doctors.find((d: Doctor) => d.id === booking.doctorId);
+          const foundUser = doctorsData.users.find((u: User) => u.email === booking.patientEmail) || doctorsData.users[0];
+
+          if (foundDoctor && foundUser) {
+            setDoctor(foundDoctor);
+            setUser(foundUser);
+
+            const appointment: AppointmentData = {
+              id: booking.id,
+              status: booking.status === 'confirmed' ? 'Confirmed' : booking.status,
+              date: formatDateDisplay(booking.date),
+              time: booking.time,
+              reportingTime: getReportingTime(booking.date, booking.time)
+            };
+
+            setAppointmentData(appointment);
+          }
+        } else {
+          throw new Error('Appointment not found');
+        }
+      }
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching appointment:', error);
+      setError('Appointment not found. Please book a new appointment.');
+      setIsLoading(false);
+    }
+  };
+
+  const createNewAppointment = async () => {
+    try {
+      const doctorId = searchParams.get('doctorId');
+      const appointmentDate = searchParams.get('date');
+      const appointmentTime = searchParams.get('time');
+
+      if (!doctorId) {
+        setError('Doctor information is missing. Please book an appointment again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch doctor and user data
+      const response = await fetch('/api/doctors');
+      const data = await response.json();
+
+      const foundDoctor = data.doctors.find((d: Doctor) => d.id === doctorId);
+      const userEmail = localStorage.getItem('userEmail');
+      const foundUser = data.users.find((u: User) => u.email === userEmail) || data.users[0];
+
+      if (!foundDoctor || !foundUser) {
+        throw new Error('Doctor or user not found');
+      }
+
+      setDoctor(foundDoctor);
+      setUser(foundUser);
+
+      // Generate unique booking ID
+      const bookingId = Date.now().toString();
+      const finalDate = appointmentDate || foundDoctor.availableDates[0] || new Date().toISOString().split('T')[0];
+      const finalTime = appointmentTime || foundDoctor.availableTimes[0] || '10:00 AM';
+
+      // Create booking object
+      const bookingData = {
+        id: bookingId,
+        doctorId: foundDoctor.id,
+        doctorName: foundDoctor.name,
+        speciality: foundDoctor.speciality,
+        date: finalDate,
+        time: finalTime,
+        patientName: getUserName(foundUser.email),
+        patientPhone: foundUser.mobile,
+        patientEmail: foundUser.email,
+        notes: '',
+        price: foundDoctor.price,
+        status: 'confirmed',
+        paymentStatus: 'not_paid',
         createdAt: new Date().toISOString()
       };
-      
-      appointments.unshift(newAppointment);
-      localStorage.setItem('userAppointments', JSON.stringify(appointments));
-      
-      console.log('Appointment stored:', newAppointment);
+
+      // Save to backend (data.json)
+      const saveResponse = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      const saveResult = await saveResponse.json();
+
+      if (saveResult.success) {
+        // Set appointment data using the booking ID
+        const appointment: AppointmentData = {
+          id: bookingId,
+          status: 'Confirmed',
+          date: formatDateDisplay(finalDate),
+          time: finalTime,
+          reportingTime: getReportingTime(finalDate, finalTime)
+        };
+
+        setAppointmentData(appointment);
+
+        // Update URL with appointment ID so it persists on refresh
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('appointmentId', bookingId);
+        window.history.replaceState({}, '', newUrl.toString());
+      } else {
+        throw new Error('Failed to save appointment to backend');
+      }
+
+      setIsLoading(false);
     } catch (error) {
-      console.error('Error storing appointment:', error);
+      console.error('Error creating appointment:', error);
+      setError('Failed to create appointment. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  function formatDateDisplay(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
     }
   }
 
   function getReportingTime(date: string, time: string): string {
     try {
-      // Parse the time (handle both 12h and 24h formats)
       let time24h = time;
       if (time.includes('AM') || time.includes('PM')) {
         const [timePart, modifier] = time.split(' ');
@@ -232,68 +258,54 @@ export default function AppointmentScheduledPage() {
   }
 
   function addToCalendar() {
-  if (!appointmentData || !doctor) return;
+    if (!appointmentData || !doctor) return;
 
-  try {
-    // Parse the appointment time to 24-hour format
-    let time24h = appointmentData.time;
-    if (appointmentData.time.includes('AM') || appointmentData.time.includes('PM')) {
-      const [timePart, modifier] = appointmentData.time.split(' ');
-      let [hours, minutes] = timePart.split(':').map(Number);
+    try {
+      let time24h = appointmentData.time;
+      if (appointmentData.time.includes('AM') || appointmentData.time.includes('PM')) {
+        const [timePart, modifier] = appointmentData.time.split(' ');
+        let [hours, minutes] = timePart.split(':').map(Number);
+        
+        if (modifier === 'PM' && hours < 12) hours += 12;
+        if (modifier === 'AM' && hours === 12) hours = 0;
+        
+        time24h = `${hours.toString().padStart(2, '0')}:${minutes?.toString().padStart(2, '0') || '00'}`;
+      }
+
+      const startDate = new Date(`${appointmentData.date}T${time24h}`);
+      const endDate = new Date(startDate.getTime() + 60 * 60000);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new Error('Invalid date format');
+      }
+
+      const formatDate = (date: Date) => {
+        return date.toISOString().replace(/-|:|\.\d+/g, '').slice(0, 15) + 'Z';
+      };
+
+      const event = {
+        text: `Appointment with Dr. ${doctor.name}`,
+        dates: `${formatDate(startDate)}/${formatDate(endDate)}`,
+        details: `Appointment with Dr. ${doctor.name}\nSpeciality: ${doctor.speciality}\nLocation: ${doctor.location}\nAppointment ID: ${appointmentData.id}`,
+        location: doctor.location
+      };
+
+      const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.text)}&dates=${event.dates}&details=${encodeURIComponent(event.details)}&location=${encodeURIComponent(event.location)}`;
       
-      if (modifier === 'PM' && hours < 12) hours += 12;
-      if (modifier === 'AM' && hours === 12) hours = 0;
-      
-      time24h = `${hours.toString().padStart(2, '0')}:${minutes?.toString().padStart(2, '0') || '00'}`;
+      window.open(calendarUrl, '_blank');
+    } catch (error) {
+      console.error('Error creating calendar event:', error);
+      alert('Could not open calendar. Please try again.');
     }
-
-    // Create date objects
-    const startDate = new Date(`${appointmentData.date}T${time24h}`);
-    const endDate = new Date(startDate.getTime() + 60 * 60000); // 1 hour duration
-
-    // Validate dates
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      throw new Error('Invalid date format');
-    }
-
-    // Format dates for Google Calendar (YYYYMMDDTHHmmssZ)
-    const formatDate = (date: Date) => {
-      return date.toISOString().replace(/-|:|\.\d+/g, '').slice(0, 15) + 'Z';
-    };
-
-    const event = {
-      text: `Appointment with Dr. ${doctor.name}`,
-      dates: `${formatDate(startDate)}/${formatDate(endDate)}`,
-      details: `Appointment with Dr. ${doctor.name}\nSpeciality: ${doctor.speciality}\nLocation: ${doctor.location}\nAppointment ID: ${appointmentData.id}`,
-      location: doctor.location
-    };
-
-    const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.text)}&dates=${event.dates}&details=${encodeURIComponent(event.details)}&location=${encodeURIComponent(event.location)}`;
-    
-    window.open(calendarUrl, '_blank');
-  } catch (error) {
-    console.error('Error creating calendar event:', error);
-    alert('Could not open calendar. Please try again.');
   }
-}
 
   const handleAddPatientDetails = () => {
-    if (appointmentData && doctor) {
-      sessionStorage.setItem('returnToAppointment', JSON.stringify({
-        appointmentId: appointmentData.id,
-        doctorId: doctor.id,
-        date: appointmentData.date,
-        time: appointmentData.time
-      }));
+    if (appointmentData) {
+      router.push(`/user/add-patient/${appointmentData.id}`);
     }
-
-    // Navigate to add-patient page with query parameter
-    router.push(`/user/add-patient/${appointmentData?.id}`);
-    
   };
 
   const handleBack = () => {
-    // Go back to previous page in history
     router.back();
   };
 
@@ -321,13 +333,13 @@ export default function AppointmentScheduledPage() {
           <p className="text-red-600 mb-6">{error || 'Appointment details not found'}</p>
           <div className="space-y-3">
             <Link 
-              href="/home" 
+              href="/user/dashboard" 
               className="block w-full bg-[#4FC3F7] text-white py-3 rounded-lg font-semibold hover:bg-[#4682A9] transition duration-200"
             >
               Book New Appointment
             </Link>
             <Link 
-              href="/appointments" 
+              href="/user/appointments" 
               className="block w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition duration-200"
             >
               View My Appointments
@@ -343,18 +355,18 @@ export default function AppointmentScheduledPage() {
       <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
         {/* Header */}
         <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
-        <div className="px-4 sm:px-6 py-4">
-          <div className="flex items-center">
-            <button
-              onClick={handleBack}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <h1 className="ml-3 text-lg sm:text-xl font-bold">Appointment Scheduled</h1>
+          <div className="px-4 sm:px-6 py-4">
+            <div className="flex items-center">
+              <button
+                onClick={handleBack}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <h1 className="ml-3 text-lg sm:text-xl font-bold">Appointment Scheduled</h1>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
           <div className="space-y-6">
@@ -501,36 +513,20 @@ export default function AppointmentScheduledPage() {
               </div>
             </section>
 
-            {/* Add Patient Details - Fixed visibility and proper navigation */}
+            {/* Add Patient Details */}
             <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Patient Medical History</h3>
-              {/* <p className="text-sm text-gray-600 mb-4">
-                Add your medical history, allergies, current medications, and other important health information to help your doctor provide better care.
-              </p> */}
               <button 
                 onClick={handleAddPatientDetails}
                 className="flex items-center justify-center w-full px-4 py-4 bg-[#4682A9] text-white rounded-lg hover:bg-[#3a6c8a] transition duration-200 text-base font-semibold shadow-md"
               >
                 <FaPlus className="mr-3 text-lg" /> Add Patient Medical Details
               </button>
-              <br/>
             </section>
           </div>
         </main>
 
-        {/* Bottom Navigation */}
         <BottomNavigation activeTab="appointments" />
-
-        {/* Footer Button */}
-        {/* <footer className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <Link href="/appointments">
-              <button className="w-full bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white py-3 rounded-lg text-md font-semibold hover:shadow-md transition-all duration-200 shadow-lg">
-                View My Appointments
-              </button>
-            </Link>
-          </div>
-        </footer> */}
       </div>
     </ProtectedRoute>
   );

@@ -463,9 +463,13 @@ export default function HomePage() {
                           </div>
                           
                           <div className="flex gap-3">
+                            
+                            <Link href={`/user/doctors/${doctor.id}`}>
                             <button className="px-4 py-2 bg-[#91C8E4]/10 hover:bg-[#91C8E4]/20 text-[#4682A9] font-medium rounded-lg transition-all duration-300 border border-[#91C8E4]/30 text-sm">
-                              View Profile
+                             View Profile
                             </button>
+                            </Link>
+
                             <Link
                               href={`/user/book-appointment/${doctor.id}`}
                               className="px-6 py-2 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg text-sm"

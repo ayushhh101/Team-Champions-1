@@ -19,6 +19,7 @@ interface Appointment {
   notes: string
   price: number | string
   status: string
+  paymentStatus?: string
   createdAt: string
 }
 
@@ -26,10 +27,6 @@ export default function AddPatientDetailsPage() {
   const router = useRouter()
   const params = useParams()
   const appointmentId = params.appointmentId as string
-
-  useEffect(() => {
-    console.log('appointmentId from params:', appointmentId)
-  }, [appointmentId])
 
   const [appointment, setAppointment] = useState<Appointment | null>(null)
   const [fullName, setFullName] = useState('')
@@ -40,128 +37,150 @@ export default function AddPatientDetailsPage() {
   const [problem, setProblem] = useState('')
   const [relationship, setRelationship] = useState('')
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  const relationshipOptions = ['Son', 'Brother', 'Sister', 'Father', 'Mother', 'Spouse', 'Friend', 'Self']
+  const relationshipOptions = ['Self', 'Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Friend', 'Other']
 
   useEffect(() => {
-    if (!appointmentId) {
-      toast.error('Appointment ID is missing');
-      router.push('/appointments');
-      return;
+    const fetchAppointment = async () => {
+      if (!appointmentId) {
+        toast.error('Appointment ID is missing')
+        router.push('/user/appointments')
+        return
+      }
+
+      try {
+        // Fetch appointment from backend
+        const response = await fetch('/api/bookings')
+        const data = await response.json()
+
+        if (data.success && data.bookings) {
+          const foundAppointment = data.bookings.find((apt: Appointment) => apt.id === appointmentId)
+
+          if (foundAppointment) {
+            setAppointment(foundAppointment)
+            // Pre-fill form with existing data
+            setFullName(foundAppointment.patientName || '')
+            setMobileNumber(foundAppointment.patientPhone || '')
+          } else {
+            toast.error('Appointment not found')
+            router.push('/user/appointments')
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching appointment:', error)
+        toast.error('Failed to load appointment details')
+        router.push('/user/appointments')
+      } finally {
+        setLoading(false)
+      }
     }
 
-    const appointments = JSON.parse(localStorage.getItem('userAppointments') || '[]');
-    const foundAppointment = appointments.find((apt: Appointment) => apt.id === appointmentId);
-    
-    if (foundAppointment) {
-      setAppointment(foundAppointment);
-      setFullName(foundAppointment.patientName || '');
-      setMobileNumber(foundAppointment.patientPhone || '');
-    } else {
-      toast.error('Appointment not found');
-      router.push('/appointments');
+    fetchAppointment()
+  }, [appointmentId, router])
+
+  const handleSave = async () => {
+    // Validation
+    if (!fullName.trim()) {
+      toast.error('Please enter full name')
+      return
     }
-  }, [appointmentId, router]);
+    if (!age || parseInt(age) < 1 || parseInt(age) > 150) {
+      toast.error('Please enter valid age (1-150)')
+      return
+    }
+    if (!mobileNumber.trim() || mobileNumber.length !== 10) {
+      toast.error('Please enter valid 10-digit mobile number')
+      return
+    }
+    if (!weight || parseInt(weight) < 1) {
+      toast.error('Please enter valid weight')
+      return
+    }
+    if (!problem.trim()) {
+      toast.error('Please describe your problem')
+      return
+    }
+    if (!relationship) {
+      toast.error('Please select relationship with patient')
+      return
+    }
 
-  // const handleSave = async () => {
-  //   // Validation
-  //   if (!fullName.trim()) {
-  //     toast.error('Please enter full name');
-  //     return;
-  //   }
-  //   if (!age || parseInt(age) < 1) {
-  //     toast.error('Please enter valid age');
-  //     return;
-  //   }
-  //   if (!mobileNumber.trim() || mobileNumber.length < 10) {
-  //     toast.error('Please enter valid mobile number');
-  //     return;
-  //   }
-  //   if (!weight || parseInt(weight) < 1) {
-  //     toast.error('Please enter valid weight');
-  //     return;
-  //   }
-  //   if (!problem.trim()) {
-  //     toast.error('Please describe your problem');
-  //     return;
-  //   }
-  //   if (!relationship) {
-  //     toast.error('Please select relationship with patient');
-  //     return;
-  //   }
-const handleSave = async () => {
-  // Validation
-  if (!fullName.trim()) {
-    toast.error('Please enter full name');
-    return;
-  }
-  if (!age || parseInt(age) < 1) {
-    toast.error('Please enter valid age');
-    return;
-  }
-  if (!mobileNumber.trim() || mobileNumber.length < 10) {
-    toast.error('Please enter valid mobile number');
-    return;
-  }
-  if (!weight || parseInt(weight) < 1) {
-    toast.error('Please enter valid weight');
-    return;
-  }
-  if (!problem.trim()) {
-    toast.error('Please describe your problem');
-    return;
-  }
-  if (!relationship) {
-    toast.error('Please select relationship with patient');
-    return;
+    const patientDetails = {
+      fullName,
+      age: parseInt(age),
+      gender,
+      mobileNumber,
+      weight: parseInt(weight),
+      problem,
+      relationship,
+      addedAt: new Date().toISOString()
+    }
+
+    try {
+      // Update booking with patient details
+      const response = await fetch('/api/bookings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: appointmentId,
+          patientDetails,
+          patientName: fullName,
+          patientPhone: mobileNumber,
+          notes: problem
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success('Patient details saved successfully!', {
+          duration: 2000,
+          style: {
+            background: '#10B981',
+            color: '#ffffff',
+            fontWeight: 'bold',
+          },
+        })
+
+        // Redirect to payment page with appointment details
+        setTimeout(() => {
+          router.push(`/user/payment?appointmentId=${appointmentId}&amount=${appointment?.price}&doctorName=${encodeURIComponent(appointment?.doctorName || '')}`)
+        }, 2000)
+      } else {
+        throw new Error('Failed to update patient details')
+      }
+    } catch (error) {
+      toast.error('Failed to save patient details. Please try again.')
+      console.error('Save error:', error)
+    }
   }
 
-  // const patientDetails = {
-  //   appointmentId,
-  //   fullName,
-  //   age: parseInt(age),
-  //   gender,
-  //   mobileNumber,
-  //   weight: parseInt(weight),
-  //   problem,
-  //   relationship,
-  //   addedAt: new Date().toISOString()
-  // };
-
-  try {
-    // const res = await fetch('/api/bookings', {
-    //   method: 'PATCH',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({ appointmentId, patientDetails }),
-    // });
-
-    // if (!res.ok) throw new Error('Failed to update patient details');
-
-    toast.success('Patient details saved successfully!', {
-      duration: 2000,
-      style: {
-        background: '#10B981',
-        color: '#ffffff',
-        fontWeight: 'bold',
-      },
-    });
-
-    setTimeout(() => {
-      router.push('/user/payment'); // move to payment after save
-    }, 2000);
-
-  } catch (error) {
-    toast.error('Failed to save patient details. Please try again.');
-    console.error('Save error:', error);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4682A9] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading appointment details...</p>
+        </div>
+      </div>
+    )
   }
-};
 
   if (!appointment) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4682A9]"></div>
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Appointment not found</p>
+          <button
+            onClick={() => router.push('/user/appointments')}
+            className="px-6 py-2 bg-[#4682A9] text-white rounded-lg hover:bg-[#749BC2] transition-all"
+          >
+            Go to Appointments
+          </button>
+        </div>
       </div>
     )
   }
@@ -181,7 +200,7 @@ const handleSave = async () => {
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <h1 className="ml-3 text-lg sm:text-xl font-bold">Adding Patient Details</h1>
+              <h1 className="ml-3 text-lg sm:text-xl font-bold">Add Patient Details</h1>
             </div>
           </div>
         </header>
@@ -201,12 +220,12 @@ const handleSave = async () => {
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="bg-gray-50 p-2 rounded-lg">
-                <p className="text-black text-xs">Date</p>
-                <p className="text-black font-semibold">{new Date(appointment.date).toLocaleDateString()}</p>
+                <p className="text-gray-600 text-xs">Date</p>
+                <p className="text-gray-900 font-semibold">{new Date(appointment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
               </div>
               <div className="bg-gray-50 p-2 rounded-lg">
-                <p className="text-black text-xs">Time</p>
-                <p className="text-black font-semibold">{appointment.time}</p>
+                <p className="text-gray-600 text-xs">Time</p>
+                <p className="text-gray-900 font-semibold">{appointment.time}</p>
               </div>
             </div>
           </div>
@@ -219,7 +238,7 @@ const handleSave = async () => {
               {/* Full Name */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Full name
+                  Full name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -237,7 +256,7 @@ const handleSave = async () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Age
+                    Age <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -251,7 +270,7 @@ const handleSave = async () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Gender
+                    Gender <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={gender}
@@ -268,14 +287,14 @@ const handleSave = async () => {
               {/* Mobile Number */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Mobile Number
+                  Mobile Number <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="tel"
                     value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value)}
+                    onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="9999999900"
                     maxLength={10}
                     className="w-full pl-10 pr-4 py-3 border-2 text-gray-900 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] transition-colors"
@@ -286,7 +305,7 @@ const handleSave = async () => {
               {/* Weight */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Weight
+                  Weight <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Weight className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -308,14 +327,14 @@ const handleSave = async () => {
               {/* Problem */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Problem
+                  Problem / Symptoms <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <FileText className="absolute left-3 top-4 w-5 h-5 text-gray-400" />
                   <textarea
                     value={problem}
                     onChange={(e) => setProblem(e.target.value)}
-                    placeholder="write something about your problem"
+                    placeholder="Describe your symptoms or health concerns..."
                     rows={4}
                     className="w-full pl-10 pr-4 py-3 border-2 text-gray-900 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#91C8E4] focus:border-[#4682A9] resize-none transition-colors"
                   />
@@ -325,7 +344,7 @@ const handleSave = async () => {
               {/* Relationship with Patient */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Relationship with Patient
+                  Relationship with Patient <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
@@ -369,19 +388,18 @@ const handleSave = async () => {
             {/* Save Button */}
             <button
               onClick={handleSave}
-              className="w-full py-4 mt-6 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#7DB3D6] hover:to-[#3C7197]  text-white font-semibold text-lg rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.98] "
+              className="w-full py-4 mt-6 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#7DB3D6] hover:to-[#3C7197] text-white font-semibold text-lg rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.98]"
             > 
-              Pay Consulting Fee
+              Save & Proceed to Payment
             </button>
 
-            {/* Chat Button */}
+            {/* Optional: Skip to Chat */}
             <button
               onClick={() => router.push(`/user/chat/${appointmentId}`)}
-              className=" w-full mt-4  text-sky-500 font-semibold text-lg border border-sky-300 rounded-2xl px-8 py-3  bg-white  hover:bg-sky-50shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center "
+              className="w-full mt-4 text-sky-500 font-semibold text-lg border-2 border-sky-300 rounded-xl px-8 py-3 bg-white hover:bg-sky-50 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center"
             >
-              Quick query
+              Skip & Ask Quick Query
             </button>
-
           </div>
         </main>
       </div>

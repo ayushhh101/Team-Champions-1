@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -553,6 +554,13 @@ export default function DoctorAppointmentsPage() {
                   );
                 })}
               </div>
+              <Link href="/doctor/prescriptions/list">
+              <button className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-semibold">
+             <FileText className="w-4 h-4" />
+             <span className="hidden sm:inline">Prescriptions</span>
+            </button>
+             </Link>
+
             </div>
           </div>
         </div>
@@ -741,10 +749,13 @@ export default function DoctorAppointmentsPage() {
                         <span>View History</span>
                       </button>
                     </div>
-                    <button className="flex items-center space-x-1 px-3 py-2 bg-[#4FC3F7]/10 text-[#4FC3F7] rounded-lg hover:bg-[#4FC3F7]/20 transition-colors text-sm font-medium">
-                      <FileText className="w-4 h-4" />
-                      <span>Write Prescription</span>
+                    <Link href={`/doctor/prescription?appointmentId=${appointment.id}`}>
+                     <button className="flex items-center space-x-1 px-3 py-2 bg-[#4FC3F7]/10 text-[#4FC3F7] rounded-lg hover:bg-[#4FC3F7]/20 transition-colors text-sm font-medium">
+                     <FileText className="w-4 h-4" />
+                     <span>Write Prescription</span>
                     </button>
+                   </Link>
+
                   </div>
                 </div>
               ))
@@ -1305,9 +1316,12 @@ export default function DoctorAppointmentsPage() {
               <button className="flex-1 bg-green-100 text-green-700 py-2 px-4 rounded-lg hover:bg-green-200 transition-colors font-medium">
                 Mark Complete
               </button>
-              <button className="flex-1 bg-[#4FC3F7]/10 text-[#4FC3F7] py-2 px-4 rounded-lg hover:bg-[#4FC3F7]/20 transition-colors font-medium">
-                Write Prescription
+              <Link href={`/doctor/prescription?appointmentId=${selectedEvent.id}`} className="flex-1">
+               <button className="w-full bg-[#4FC3F7]/10 text-[#4FC3F7] py-2 px-4 rounded-lg hover:bg-[#4FC3F7]/20 transition-colors font-medium">
+               Write Prescription
               </button>
+              </Link>
+
             </div>
           </div>
         </div>

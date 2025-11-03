@@ -594,9 +594,10 @@
       "patientEmail": "michael.davis@email.com",
       "notes": "Growth monitoring checkup",
       "price": 1200,
-      "status": "confirmed",
+      "status": "completed",
       "createdAt": "2025-10-30T05:02:00.003Z",
-      "paymentStatus": "not_paid"
+      "paymentStatus": "not_paid",
+      "updatedAt": "2025-11-03T07:13:22.995Z"
     },
     {
       "id": "1761800000004",
@@ -629,28 +630,42 @@
       "status": "completed",
       "createdAt": "2025-10-29T05:04:00.005Z",
       "paymentStatus": "paid"
-    }
-  ],
-  "appointments": [
-    {
-      "id": "apt1",
-      "patientId": "patient1",
-      "patientName": "John Doe",
-      "doctorId": "doc3",
-      "date": "2025-10-29",
-      "time": "10:00 AM",
-      "type": "General Checkup",
-      "status": "upcoming"
     },
     {
-      "id": "apt2",
-      "patientId": "patient2",
-      "patientName": "Sarah Wilson",
-      "doctorId": "doc3",
-      "date": "2025-10-29",
-      "time": "02:30 PM",
-      "type": "Follow-up",
-      "status": "upcoming"
+      "id": "1762156367098",
+      "doctorId": "doc8",
+      "doctorName": "Dr. Kavita Desai",
+      "speciality": "Psychiatrist",
+      "date": "2025-11-05",
+      "time": "10:00",
+      "patientName": "debasmita",
+      "patientPhone": "9876543212",
+      "patientEmail": "sarah.williams@email.com",
+      "notes": "fever",
+      "price": 1300,
+      "status": "confirmed",
+      "paymentStatus": "paid",
+      "createdAt": "2025-11-03T07:52:47.098Z",
+      "patientDetails": {
+        "fullName": "debasmita",
+        "age": 23,
+        "gender": "Female",
+        "mobileNumber": "9876543212",
+        "weight": 45,
+        "problem": "fever",
+        "relationship": "Self",
+        "addedAt": "2025-11-03T07:54:09.136Z"
+      },
+      "updatedAt": "2025-11-03T07:54:30.455Z",
+      "paymentDetails": {
+        "cardType": "Visa",
+        "lastFourDigits": "   4",
+        "cardholderName": "ds",
+        "paidAt": "2025-11-03T07:54:30.436Z",
+        "amount": 1300
+      }
     }
-  ]
+    
+  ],
+  "prescriptions": []
 }
