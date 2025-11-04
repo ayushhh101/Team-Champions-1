@@ -1,24 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import fs from 'fs/promises';
-import path from 'path';
+import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
 
-const dataFilePath = path.join(process.cwd(), 'app', 'data', 'data.json');
+const redis = Redis.fromEnv();
+
+interface Booking {
+  id: string;
+  patientEmail?: string;
+  patientPhone?: string;
+  status: string;
+  paymentStatus: string;
+  date: string;
+  time: string;
+  createdAt: string;
+  updatedAt?: string;
+  [key: string]: any;
+}
 
 // GET: Return all bookings with optional filtering
 export async function GET(request: NextRequest) {
   try {
-    // Get query parameters for filtering
     const searchParams = request.nextUrl.searchParams;
     const patientEmail = searchParams.get('patientEmail');
     const patientPhone = searchParams.get('patientPhone');
     const status = searchParams.get('status');
     const doctorId = searchParams.get('doctorId');
 
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
-
-    let bookings = data.bookings || [];
+    let bookings = (await redis.get('bookings')) as Booking[] || [];
 
     // Apply filters if provided
     if (patientEmail) {
@@ -44,17 +52,17 @@ export async function GET(request: NextRequest) {
       return dateB - dateA;
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       bookings,
-      count: bookings.length 
+      count: bookings.length
     });
   } catch (error) {
     console.error('Error reading bookings:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
-      message: 'Failed to read bookings', 
-      bookings: [] 
+      message: 'Failed to read bookings',
+      bookings: []
     }, { status: 500 });
   }
 }
@@ -64,16 +72,9 @@ export async function POST(req: Request) {
   try {
     const newBooking = await req.json();
 
-    // Read existing data
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
+    const bookings = (await redis.get('bookings')) as Booking[] || [];
 
-    // Add new booking with default values
-    if (!data.bookings) {
-      data.bookings = [];
-    }
-
-    const booking = {
+    const booking: Booking = {
       id: newBooking.id || Date.now().toString(),
       ...newBooking,
       status: newBooking.status || 'confirmed',
@@ -81,59 +82,52 @@ export async function POST(req: Request) {
       createdAt: newBooking.createdAt || new Date().toISOString()
     };
 
-    data.bookings.push(booking);
+    bookings.push(booking);
+    await redis.set('bookings', bookings);
 
-    // Write updated data back to file
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Booking saved', 
-      booking 
+      message: 'Booking saved',
+      booking
     }, { status: 201 });
   } catch (error) {
     console.error('Error saving booking:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
-      message: 'Failed to save booking' 
+      message: 'Failed to save booking'
     }, { status: 500 });
   }
 }
 
-// PATCH: Update booking (status, patient details, payment status, etc.)
+// PATCH: Update booking
 export async function PATCH(req: Request) {
   try {
     const updates = await req.json();
     const { id, appointmentId, patientDetails, status, paymentStatus, ...otherUpdates } = updates;
 
-    // Use either 'id' or 'appointmentId' for backward compatibility
     const bookingId = id || appointmentId;
 
     if (!bookingId) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: 'Booking ID is required' 
+        message: 'Booking ID is required'
       }, { status: 400 });
     }
 
-    // Read existing data
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
+    let bookings = (await redis.get('bookings')) as Booking[] || [];
 
     let bookingFound = false;
     let updatedBooking = null;
 
-    data.bookings = data.bookings.map((booking: any) => {
+    bookings = bookings.map((booking: any) => {
       if (booking.id === bookingId) {
         bookingFound = true;
-        
-        // Build the updated booking object
+
         const updated = {
           ...booking,
           ...otherUpdates
         };
 
-        // Update specific fields if provided
         if (patientDetails) {
           updated.patientDetails = patientDetails;
         }
@@ -144,9 +138,7 @@ export async function PATCH(req: Request) {
           updated.paymentStatus = paymentStatus;
         }
 
-        // Add updated timestamp
         updated.updatedAt = new Date().toISOString();
-        
         updatedBooking = updated;
         return updated;
       }
@@ -154,25 +146,24 @@ export async function PATCH(req: Request) {
     });
 
     if (!bookingFound) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: 'Booking not found' 
+        message: 'Booking not found'
       }, { status: 404 });
     }
 
-    // Write back updated data
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    await redis.set('bookings', bookings);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Booking updated successfully',
       booking: updatedBooking
     }, { status: 200 });
   } catch (error) {
     console.error('Error updating booking:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
-      message: 'Failed to update booking' 
+      message: 'Failed to update booking'
     }, { status: 500 });
   }
 }
@@ -184,36 +175,35 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: 'Booking ID is required' 
+        message: 'Booking ID is required'
       }, { status: 400 });
     }
 
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
+    let bookings = (await redis.get('bookings')) as Booking[] || [];
 
-    const initialLength = data.bookings?.length || 0;
-    data.bookings = data.bookings?.filter((booking: any) => booking.id !== id) || [];
+    const initialLength = bookings.length;
+    bookings = bookings.filter((booking: any) => booking.id !== id);
 
-    if (data.bookings.length === initialLength) {
-      return NextResponse.json({ 
+    if (bookings.length === initialLength) {
+      return NextResponse.json({
         success: false,
-        message: 'Booking not found' 
+        message: 'Booking not found'
       }, { status: 404 });
     }
 
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    await redis.set('bookings', bookings);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Booking deleted successfully' 
+      message: 'Booking deleted successfully'
     }, { status: 200 });
   } catch (error) {
     console.error('Error deleting booking:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
-      message: 'Failed to delete booking' 
+      message: 'Failed to delete booking'
     }, { status: 500 });
   }
 }

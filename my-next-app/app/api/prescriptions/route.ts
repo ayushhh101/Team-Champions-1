@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import fs from 'fs/promises';
-import path from 'path';
+import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
 
-const dataFilePath = path.join(process.cwd(), 'app', 'data', 'data.json');
+const redis = Redis.fromEnv();
 
 interface Prescription {
   id: string;
@@ -39,10 +38,7 @@ export async function GET(request: NextRequest) {
     const appointmentId = searchParams.get('appointmentId');
     const id = searchParams.get('id');
 
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
-
-    let prescriptions = data.prescriptions || [];
+    let prescriptions = (await redis.get('prescriptions')) as Prescription[] || [];
 
     // Apply filters
     if (id) {
@@ -83,13 +79,7 @@ export async function POST(req: Request) {
   try {
     const prescriptionData = await req.json();
 
-    // Read existing data
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
-
-    if (!data.prescriptions) {
-      data.prescriptions = [];
-    }
+    const prescriptions = (await redis.get('prescriptions')) as Prescription[] || [];
 
     // Create new prescription with ID
     const prescription: Prescription = {
@@ -98,10 +88,8 @@ export async function POST(req: Request) {
       prescribedAt: prescriptionData.prescribedAt || new Date().toISOString()
     };
 
-    data.prescriptions.push(prescription);
-
-    // Write updated data back to file
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    prescriptions.push(prescription);
+    await redis.set('prescriptions', prescriptions);
 
     return NextResponse.json({
       success: true,
@@ -130,14 +118,12 @@ export async function PATCH(req: Request) {
       }, { status: 400 });
     }
 
-    // Read existing data
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
+    const prescriptions = (await redis.get('prescriptions')) as Prescription[] || [];
 
     let prescriptionFound = false;
     let updatedPrescription = null;
 
-    data.prescriptions = data.prescriptions.map((prescription: any) => {
+    const updatedPrescriptions = prescriptions.map((prescription: any) => {
       if (prescription.id === id) {
         prescriptionFound = true;
         const updated = {
@@ -158,8 +144,7 @@ export async function PATCH(req: Request) {
       }, { status: 404 });
     }
 
-    // Write back updated data
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    await redis.set('prescriptions', updatedPrescriptions);
 
     return NextResponse.json({
       success: true,
@@ -188,20 +173,19 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
+    let prescriptions = (await redis.get('prescriptions')) as Prescription[] || [];
 
-    const initialLength = data.prescriptions?.length || 0;
-    data.prescriptions = data.prescriptions?.filter((prescription: any) => prescription.id !== id) || [];
+    const initialLength = prescriptions.length;
+    prescriptions = prescriptions.filter((prescription: any) => prescription.id !== id);
 
-    if (data.prescriptions.length === initialLength) {
+    if (prescriptions.length === initialLength) {
       return NextResponse.json({
         success: false,
         message: 'Prescription not found'
       }, { status: 404 });
     }
 
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    await redis.set('prescriptions', prescriptions);
 
     return NextResponse.json({
       success: true,

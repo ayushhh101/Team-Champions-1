@@ -1,9 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
 
-const dataFilePath = path.join(process.cwd(), 'app', 'data', 'data.json');
+const redis = Redis.fromEnv();
+
+interface Appointment {
+  id: string;
+  doctorId: string;
+  patientId: string;
+  status: string;
+  createdAt: string;
+  updatedAt?: string;
+  [key: string]: any;
+}
 
 // GET: Fetch appointments (filter by doctorId or patientId)
 export async function GET(request: NextRequest) {
@@ -12,10 +21,7 @@ export async function GET(request: NextRequest) {
     const doctorId = searchParams.get('doctorId');
     const patientId = searchParams.get('patientId');
 
-    const fileContents = await fs.readFile(dataFilePath, 'utf8');
-    const data = JSON.parse(fileContents);
-
-    let appointments = data.appointments || [];
+    let appointments = (await redis.get('appointments')) as Appointment[] || [];
 
     // Filter by doctorId if provided
     if (doctorId) {
@@ -28,10 +34,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { 
-        success: true, 
+      {
+        success: true,
         appointments,
-        count: appointments.length 
+        count: appointments.length
       },
       { status: 200 }
     );
@@ -39,10 +45,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching appointments:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to fetch appointments',
-        appointments: [] 
+        appointments: []
       },
       { status: 500 }
     );
@@ -53,11 +59,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    const fileContents = await fs.readFile(dataFilePath, 'utf8');
-    const data = JSON.parse(fileContents);
 
-    const newAppointment = {
+    const appointments = (await redis.get('appointments')) as Appointment[] || [];
+
+    const newAppointment: Appointment = {
       id: `apt${Date.now()}`,
       ...body,
       patientId: body.patientId || body.id,
@@ -65,14 +70,12 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString()
     };
 
-    data.appointments = data.appointments || [];
-    data.appointments.push(newAppointment);
-
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
+    appointments.push(newAppointment);
+    await redis.set('appointments', appointments);
 
     return NextResponse.json(
-      { 
-        success: true, 
+      {
+        success: true,
         appointment: newAppointment,
         message: 'Appointment created successfully'
       },
@@ -82,9 +85,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating appointment:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to create appointment' 
+      {
+        success: false,
+        error: 'Failed to create appointment'
       },
       { status: 500 }
     );
@@ -104,12 +107,11 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const fileContents = await fs.readFile(dataFilePath, 'utf8');
-    const data = JSON.parse(fileContents);
+    const appointments = (await redis.get('appointments')) as Appointment[] || [];
 
-    const appointmentIndex = data.appointments?.findIndex((apt: any) => apt.id === id);
+    const appointmentIndex = appointments.findIndex((apt: any) => apt.id === id);
 
-    if (appointmentIndex === -1 || appointmentIndex === undefined) {
+    if (appointmentIndex === -1) {
       return NextResponse.json(
         { success: false, error: 'Appointment not found' },
         { status: 404 }
@@ -117,18 +119,18 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update appointment with all provided fields
-    data.appointments[appointmentIndex] = {
-      ...data.appointments[appointmentIndex],
+    appointments[appointmentIndex] = {
+      ...appointments[appointmentIndex],
       ...body,
       updatedAt: new Date().toISOString()
     };
 
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
+    await redis.set('appointments', appointments);
 
     return NextResponse.json(
-      { 
-        success: true, 
-        appointment: data.appointments[appointmentIndex],
+      {
+        success: true,
+        appointment: appointments[appointmentIndex],
         message: 'Appointment updated successfully'
       },
       { status: 200 }
@@ -156,26 +158,25 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const fileContents = await fs.readFile(dataFilePath, 'utf8');
-    const data = JSON.parse(fileContents);
+    const appointments = (await redis.get('appointments')) as Appointment[] || [];
 
-    const appointmentIndex = data.appointments?.findIndex((apt: any) => apt.id === id);
+    const appointmentIndex = appointments.findIndex((apt: any) => apt.id === id);
 
-    if (appointmentIndex === -1 || appointmentIndex === undefined) {
+    if (appointmentIndex === -1) {
       return NextResponse.json(
         { success: false, error: 'Appointment not found' },
         { status: 404 }
       );
     }
 
-    const deletedAppointment = data.appointments[appointmentIndex];
-    data.appointments.splice(appointmentIndex, 1);
+    const deletedAppointment = appointments[appointmentIndex];
+    appointments.splice(appointmentIndex, 1);
 
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
+    await redis.set('appointments', appointments);
 
     return NextResponse.json(
-      { 
-        success: true, 
+      {
+        success: true,
         message: 'Appointment deleted successfully',
         appointment: deletedAppointment
       },

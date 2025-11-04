@@ -553,7 +553,9 @@ export default function DoctorAppointmentsPage() {
     revert();
     alert('Appointment duration is fixed at 1 hour. Use drag to reschedule the entire appointment.');
   };
-
+   const handleBackClick = () => {
+  router.push('/doctor/dashboard');
+  };
   // Handle cancel appointment
   const handleCancelAppointment = async (appointmentId: string) => {
     try {
@@ -680,18 +682,23 @@ export default function DoctorAppointmentsPage() {
       <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg">
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <button
-                onClick={() => router.back()}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors mr-3"
-              >
-                <ArrowLeft className="w-6 h-6" />
-              </button>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold">My Appointments</h1>
-                <p className="text-sm text-white/80">Manage your patient appointments</p>
-              </div>
-            </div>
+            <div className="flex items-center gap-3">
+          {/* Back Button - Only the arrow */}
+          <button
+          onClick={handleBackClick}
+          className="p-2 hover:bg-white/20 rounded-lg transition-colors shrink-0"
+         title="Go back to dashboard"
+          >
+         <ArrowLeft className="w-5 h-5 text-white" />
+        </button>
+
+  {/* Title Section - Separate from button */}
+  <div>
+    <h1 className="text-lg sm:text-xl font-bold text-white">My Appointments</h1>
+    <p className="text-sm text-white/80">Manage your patient appointments</p>
+  </div>
+</div>
+
             <div className="flex items-center space-x-2">
               {/* View Mode Toggle */}
               <div className="flex bg-white/20 rounded-lg p-1">

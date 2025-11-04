@@ -1,9 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import fs from 'fs/promises';
-import path from 'path';
+import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
 
-const dataFilePath = path.join(process.cwd(), 'app', 'data', 'data.json');
+const redis = Redis.fromEnv();
+
+interface Booking {
+  id: string;
+  date: string;
+  time: string;
+  status: string;
+  [key: string]: any;
+}
 
 // PATCH: Update appointment date/time for drag-and-drop rescheduling
 export async function PATCH(req: NextRequest) {
@@ -11,15 +18,13 @@ export async function PATCH(req: NextRequest) {
     const { appointmentId, newDate, newTime, action } = await req.json();
 
     if (!appointmentId) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: 'Appointment ID is required' 
+        message: 'Appointment ID is required'
       }, { status: 400 });
     }
 
-    // Read existing data
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
+    let bookings = (await redis.get('bookings')) as Booking[] || [];
 
     let appointmentFound = false;
     let updatedAppointment = null;
@@ -27,13 +32,13 @@ export async function PATCH(req: NextRequest) {
     // Handle different actions
     if (action === 'reschedule') {
       if (!newDate || !newTime) {
-        return NextResponse.json({ 
+        return NextResponse.json({
           success: false,
-          message: 'New date and time are required for rescheduling' 
+          message: 'New date and time are required for rescheduling'
         }, { status: 400 });
       }
 
-      data.bookings = data.bookings.map((booking: any) => {
+      bookings = bookings.map((booking: any) => {
         if (booking.id === appointmentId) {
           appointmentFound = true;
           const updated = {
@@ -49,7 +54,7 @@ export async function PATCH(req: NextRequest) {
       });
 
     } else if (action === 'cancel') {
-      data.bookings = data.bookings.map((booking: any) => {
+      bookings = bookings.map((booking: any) => {
         if (booking.id === appointmentId) {
           appointmentFound = true;
           const updated = {
@@ -65,47 +70,45 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (!appointmentFound) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: 'Appointment not found' 
+        message: 'Appointment not found'
       }, { status: 404 });
     }
 
-    // Write back updated data
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    // Write back updated data to Redis
+    await redis.set('bookings', bookings);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: action === 'reschedule' 
-        ? 'Appointment rescheduled successfully' 
+      message: action === 'reschedule'
+        ? 'Appointment rescheduled successfully'
         : 'Appointment cancelled successfully',
       appointment: updatedAppointment
     }, { status: 200 });
 
   } catch (error) {
     console.error('Error updating appointment:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
-      message: 'Failed to update appointment' 
+      message: 'Failed to update appointment'
     }, { status: 500 });
   }
 }
 
-// POST: Batch update multiple appointments (useful for complex rescheduling scenarios)
+// POST: Batch update multiple appointments
 export async function POST(req: NextRequest) {
   try {
     const { updates } = await req.json();
 
     if (!updates || !Array.isArray(updates)) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: 'Updates array is required' 
+        message: 'Updates array is required'
       }, { status: 400 });
     }
 
-    // Read existing data
-    const dataBuffer = await fs.readFile(dataFilePath, 'utf-8');
-    const data = JSON.parse(dataBuffer);
+    let bookings = (await redis.get('bookings')) as Booking[] || [];
 
     const updatedAppointments: any[] = [];
     const notFoundIds: string[] = [];
@@ -115,7 +118,7 @@ export async function POST(req: NextRequest) {
       const { appointmentId, newDate, newTime, action } = update;
       let found = false;
 
-      data.bookings = data.bookings.map((booking: any) => {
+      bookings = bookings.map((booking: any) => {
         if (booking.id === appointmentId) {
           found = true;
           const updated = { ...booking };
@@ -139,10 +142,10 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Write back updated data
-    await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    // Write back updated data to Redis
+    await redis.set('bookings', bookings);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Batch update completed',
       updatedAppointments,
@@ -151,9 +154,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Error batch updating appointments:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
-      message: 'Failed to batch update appointments' 
+      message: 'Failed to batch update appointments'
     }, { status: 500 });
   }
 }
