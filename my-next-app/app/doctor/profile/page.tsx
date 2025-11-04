@@ -18,8 +18,7 @@ import {
   Star,
   Shield,
   Edit3,
-  X,
-  Check
+  X
 } from 'lucide-react';
 
 interface Doctor {

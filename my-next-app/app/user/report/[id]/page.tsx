@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Stethoscope, Pill, Printer, Activity, FlaskConical, FileText } from 'lucide-react';
+import { ArrowLeft, Calendar, Phone,Stethoscope, FlaskConical } from 'lucide-react';
 
 interface Medication {
   id: string;
@@ -42,6 +42,7 @@ export default function UserPrescriptionPage() {
 
   useEffect(() => {
     fetchPrescriptionDetails();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchPrescriptionDetails = async () => {
@@ -120,7 +121,7 @@ export default function UserPrescriptionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#E8F4F8] via-[#F0F9FF] to-[#91C8E4]/20 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-[#E8F4F8] via-[#F0F9FF] to-[#91C8E4]/20 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#91C8E4] border-t-transparent mx-auto mb-4"></div>
           <p className="text-[#4682A9] font-semibold text-lg">Loading prescription...</p>
@@ -132,7 +133,7 @@ export default function UserPrescriptionPage() {
 
   if (!prescription) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#E8F4F8] via-[#F0F9FF] to-[#91C8E4]/20 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-[#E8F4F8] via-[#F0F9FF] to-[#91C8E4]/20 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-[#4682A9] mb-4">Prescription Not Found</h2>
           <p className="text-gray-600 mb-2">The requested prescription could not be found.</p>
@@ -170,9 +171,9 @@ export default function UserPrescriptionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#E8F4F8] via-[#F0F9FF] to-[#91C8E4]/20">
+    <div className="min-h-screen bg-linear-to-br from-[#E8F4F8] via-[#F0F9FF] to-[#91C8E4]/20">
       {/* Header - Hide on print */}
-      <header className="bg-gradient-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg print:hidden">
+      <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white sticky top-0 z-50 shadow-lg print:hidden">
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -197,10 +198,10 @@ export default function UserPrescriptionPage() {
         <div className="bg-white rounded-2xl shadow-xl border-2 border-[#91C8E4]/30 overflow-hidden print:shadow-none print:border print:rounded-none">
           
           {/* Doctor Letterhead Header */}
-          <div className="border-b-4 border-[#4682A9] bg-gradient-to-r from-[#FFFBDE] to-[#91C8E4]/10 p-6">
+          <div className="border-b-4 border-[#4682A9] bg-linear-to-r from-[#FFFBDE] to-[#91C8E4]/10 p-6">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-[#4682A9] rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 bg-[#4682A9] rounded-full flex items-center justify-center shrink-0">
                   <Stethoscope className="w-8 h-8 text-white" />
                 </div>
                 <div>
@@ -353,7 +354,7 @@ export default function UserPrescriptionPage() {
           )}
 
           {/* Doctor Signature Section */}
-          <div className="px-6 py-6 bg-gradient-to-r from-gray-50 to-[#FFFBDE]/20">
+          <div className="px-6 py-6 bg-linear-to-r from-gray-50 to-[#FFFBDE]/20">
             <div className="flex justify-between items-end">
               <div className="text-sm text-gray-600">
                 <p className="mb-1">📋 <span className="font-semibold">Prescription Date:</span> {formatDate(prescription.prescribedAt)}</p>

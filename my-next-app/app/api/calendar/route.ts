@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       data.bookings = data.bookings.map((booking: any) => {
         if (booking.id === appointmentId) {
           found = true;
-          let updated = { ...booking };
+          const updated = { ...booking };
 
           if (action === 'reschedule' && newDate && newTime) {
             updated.date = newDate;

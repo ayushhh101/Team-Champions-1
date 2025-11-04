@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [emailOrMobile, setEmailOrMobile] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loginType, setLoginType] = useState<'patient' | 'doctor'>('patient');
+  const [loginType] = useState<'patient' | 'doctor'>('patient');
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {

@@ -212,7 +212,7 @@ export default function ConsultingFeedbackPage() {
             <span className="text-red-500 text-2xl">⚠️</span>
           </div>
           <h2 className="text-xl font-bold text-[#2C5F7C] mb-3">Appointment not found</h2>
-          <p className="text-gray-600 mb-6">We couldn't find the appointment you're looking for.</p>
+          <p className="text-gray-600 mb-6">We couldn&lsquo;t find the appointment you&lsquo;re looking for.</p>
           <Link
             href="/user/appointment-history"
             className="inline-block bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white px-6 py-3 rounded-xl font-semibold hover:from-[#749BC2] hover:to-[#4682A9] transition-all"

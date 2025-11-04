@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback,useRef } from 'react';
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -17,7 +18,6 @@ import {
   CheckCircle, 
   Edit3, 
   FileText,
-  Filter,
   Search,
   CalendarDays,
   List
@@ -48,7 +48,6 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ appointments, onDateSelect 
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
     
@@ -490,7 +489,7 @@ export default function DoctorAppointmentsPage() {
 
   // Handle appointment rescheduling via drag and drop
   const handleEventDrop = async (dropInfo: any) => {
-    const { event, delta, revert } = dropInfo;
+    const { event, revert } = dropInfo;
     
     // Calculate new date and time
     const newStartDate = event.start;
@@ -547,7 +546,7 @@ export default function DoctorAppointmentsPage() {
 
   // Handle appointment resizing (changing duration)
   const handleEventResize = async (resizeInfo: any) => {
-    const { event, endDelta, revert } = resizeInfo;
+    const { revert } = resizeInfo;
     
     // For simplicity, we'll revert resize operations since we're using fixed 1-hour slots
     // You can implement custom duration handling here if needed

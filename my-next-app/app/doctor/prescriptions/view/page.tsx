@@ -12,10 +12,8 @@ import {
   Printer,
   Edit3,
   Stethoscope,
-  Pill,
   FlaskConical,
   FileText,
-  Download,
   Heart
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -304,12 +302,10 @@ export default function ViewPrescriptionPage() {
               {prescription.medications.map((med, index) => (
                 <div key={med.id} className="bg-[#FFFBDE]/60 border-2 border-[#4682A9]/30 rounded-xl p-5">
                   <div className="flex items-start space-x-4">
-                    <span className="font-bold text-[#4682A9] text-2xl min-w-[40px]">{index + 1}.</span>
+                    <span className="font-bold text-[#4682A9] text-2xl min-w-10">{index + 1}.</span>
                     <div className="flex-1">
-                      {/* Medicine Name */}
                       <h3 className="font-bold text-gray-900 text-lg mb-3">{med.name}</h3>
                       
-                      {/* Medicine Details Grid */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                         <div className="bg-white rounded-lg p-3 border border-gray-200">
                           <p className="text-xs text-gray-600 font-semibold">Dosage</p>
@@ -331,7 +327,6 @@ export default function ViewPrescriptionPage() {
                         </div>
                       </div>
 
-                      {/* Instructions */}
                       {med.instructions && (
                         <div className="bg-white rounded-lg p-3 border-l-4 border-[#4682A9]">
                           <p className="text-sm text-gray-700 flex items-start">
@@ -346,10 +341,9 @@ export default function ViewPrescriptionPage() {
               ))}
             </div>
 
-            {/* Medicine Warning */}
             <div className="mt-6 bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
               <p className="text-sm text-blue-900 font-semibold">
-                ⚠️ <span className="font-bold">Important:</span> Take medications as prescribed. Do not stop or change dosage without consulting the doctor. Keep all medicines out of reach of children and stored in a cool, dry place.
+                ⚠️ <span className="font-bold">Important:</span> Take medications as prescribed. Do not stop or change dosage without consulting the doctor.
               </p>
             </div>
           </div>
@@ -378,7 +372,6 @@ export default function ViewPrescriptionPage() {
                 <p className="text-lg font-semibold text-gray-900">
                   📅 {formatFullDate(prescription.followUpDate)}
                 </p>
-                <p className="text-sm text-gray-600 mt-2">Please schedule your follow-up appointment on this date or contact the clinic to confirm.</p>
               </div>
             </div>
           )}
@@ -403,15 +396,11 @@ export default function ViewPrescriptionPage() {
                 <p className="mb-2">
                   <span className="font-semibold text-gray-800">Issued Date:</span> {formatDate(prescription.prescribedAt)}
                 </p>
-                <p>
-                  <span className="font-semibold text-gray-800">Medical Facility:</span> Healthcare Clinic, City Hospital
-                </p>
               </div>
 
-              {/* Signature Area */}
               <div className="text-right">
                 <div className="border-t-2 border-gray-800 pt-2 mt-8 min-w-[250px]">
-                  <p className="font-bold text-[#4682A9] text-xl">Dr. {prescription.doctorName}</p>
+                  <p className="font-bold text-[#4682A9] text-xl">{prescription.doctorName}</p>
                   <p className="text-sm text-gray-600">{prescription.speciality || 'Medical Professional'}</p>
                   <p className="text-xs text-gray-500 mt-2">
                     Registration No: MED-{prescription.doctorId.slice(0, 8).toUpperCase()}
@@ -427,13 +416,11 @@ export default function ViewPrescriptionPage() {
             <div className="flex items-center justify-between flex-wrap gap-4 text-xs">
               <p>⚕️ Professional Medical Prescription - Confidential Document</p>
               <p>Prescription ID: <span className="font-mono">{prescription.id}</span></p>
-              <p>© {new Date().getFullYear()} Healthcare Clinic - All Rights Reserved</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Print Styles */}
       <style jsx global>{`
         @media print {
           body {
@@ -449,15 +436,6 @@ export default function ViewPrescriptionPage() {
           @page {
             margin: 1cm;
             size: A4;
-          }
-          
-          .bg-gradient-to-br {
-            background: white !important;
-          }
-          
-          .shadow-2xl,
-          .shadow-lg {
-            box-shadow: none !important;
           }
         }
       `}</style>

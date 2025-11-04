@@ -14,7 +14,7 @@ function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [signupType, setSignupType] = useState<'patient' | 'doctor'>('patient');
+  const [signupType] = useState<'patient' | 'doctor'>('patient');
   const [speciality, setSpeciality] = useState('');
   const [qualification, setQualification] = useState('');
   const [location, setLocation] = useState('');
