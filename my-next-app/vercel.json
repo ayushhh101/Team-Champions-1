@@ -1,5 +1,4 @@
 {
   "buildCommand": "next build",
-  "outputDirectory": ".next",
-  "rootDirectory": "my-next-app"
+  "outputDirectory": ".next"
 }
