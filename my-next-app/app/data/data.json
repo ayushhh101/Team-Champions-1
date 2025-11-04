@@ -516,7 +516,7 @@
       "patientEmail": "sarah.williams@email.com",
       "notes": "anxiety",
       "price": 1300,
-      "status": "confirmed",
+      "status": "completed",
       "paymentStatus": "paid",
       "createdAt": "2025-11-03T12:44:26.422Z",
       "patientDetails": {
@@ -529,7 +529,7 @@
         "relationship": "Brother",
         "addedAt": "2025-11-03T12:45:24.487Z"
       },
-      "updatedAt": "2025-11-03T12:54:25.157Z",
+      "updatedAt": "2025-11-04T12:31:25.268Z",
       "paymentDetails": {
         "cardType": "RuPay",
         "lastFourDigits": "  33",
@@ -539,5 +539,31 @@
       }
     }
   ],
-  "prescriptions": []
+  "prescriptions": [
+    {
+      "id": "1762259485212",
+      "appointmentId": "1762173866422",
+      "patientName": "ayush",
+      "patientPhone": "9876543212",
+      "patientEmail": "sarah.williams@email.com",
+      "doctorId": "doc8",
+      "doctorName": "Dr. Kavita Desai",
+      "diagnosis": "take rest",
+      "symptoms": "Anxiety and Fear",
+      "medications": [
+        {
+          "id": "1762259376274",
+          "name": "Antidepressants",
+          "dosage": "500",
+          "frequency": "2",
+          "duration": "15",
+          "instructions": "take after meals"
+        }
+      ],
+      "labTests": "",
+      "followUpDate": "",
+      "additionalNotes": "",
+      "prescribedAt": "2025-11-04T12:31:25.212Z"
+    }
+  ]
 }

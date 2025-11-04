@@ -397,11 +397,12 @@ export default function AppointmentHistoryPage() {
                           </button>
                         </Link>
                         {appt.summaryAvailable && (
-                          <Link href={`/appointment-summary/${appt.id}`} className="flex-1 min-w-[140px]">
-                            <button className="w-full px-4 py-3 bg-[#FFFBDE] hover:bg-[#FFF9E6] text-[#4682A9] border-2 border-[#91C8E4]/30 rounded-xl font-semibold text-sm shadow-sm hover:shadow-md transition-all duration-300">
-                              View Summary
-                            </button>
-                          </Link>
+                          <Link href={`/user/report/${appt.id}`} className="flex-1 min-w-[140px]">
+                         <button className="w-full px-4 py-3 bg-[#FFFBDE] hover:bg-[#FFF9E6] text-[#4682A9] border-2 border-[#91C8E4]/30 rounded-xl font-semibold text-sm shadow-sm hover:shadow-md transition-all duration-300">
+                          View Report
+                         </button> 
+                         </Link>
+
                         )}
                       </div>
                     )}
