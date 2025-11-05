@@ -5,9 +5,10 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut, Heart, MapPin, Clock, Star, Award, Search, Filter } from 'lucide-react';
+import { LogOut, Heart, MapPin, Clock, Star, Award, Search, Filter, Bell, X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import BottomNavigation from '../../components/BottomNavigation';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
+import { ReminderScheduler } from '@/app/utils/reminderScheduler';
 
 interface Doctor {
   id: string;
@@ -40,6 +41,15 @@ interface AvailabilityStatus {
   slots: number;
 }
 
+interface Notification {
+  id: string;
+  type: 'success' | 'warning' | 'info' | 'error';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+}
+
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -53,6 +63,8 @@ export default function HomePage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'rating' | 'experience' | 'price'>('name');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const router = useRouter();
 
   // Get unique specialties for filter dropdown
@@ -100,6 +112,20 @@ export default function HomePage() {
         if (savedFavorites) {
           setFavorites(JSON.parse(savedFavorites));
         }
+
+        // Fetch notifications for the user
+        try {
+          const notificationsResponse = await fetch(`/api/notifications?recipientId=${userId}&recipientType=user`);
+          if (notificationsResponse.ok) {
+            const notificationsData = await notificationsResponse.json();
+            if (notificationsData.success) {
+              setNotifications(notificationsData.notifications || []);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+          setNotifications([]);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -108,6 +134,16 @@ export default function HomePage() {
     };
 
     fetchData();
+
+    // Start the reminder scheduler for this user
+    if (!ReminderScheduler.isSchedulerRunning()) {
+      ReminderScheduler.start();
+    }
+
+    // Cleanup function to stop scheduler when component unmounts
+    return () => {
+      ReminderScheduler.stop();
+    };
   }, [router]);
 
   useEffect(() => {
@@ -280,6 +316,79 @@ export default function HomePage() {
     setSortBy('name');
   };
 
+  // Notification helper functions
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientId: userId,
+          recipientType: 'user',
+          notificationId
+        }),
+      });
+
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId ? { ...notif, read: true } : notif
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) return;
+
+      const response = await fetch(`/api/notifications?recipientId=${userId}&recipientType=user&notificationId=${notificationId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'warning':
+        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+      case 'error':
+        return <AlertCircle className="w-5 h-5 text-red-500" />;
+      default:
+        return <Info className="w-5 h-5 text-blue-500" />;
+    }
+  };
+
+  const getTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const notifTime = new Date(timestamp);
+    const diffInMinutes = Math.floor((now.getTime() - notifTime.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  const unreadCount = notifications.filter(notif => !notif.read).length;
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-[#E8F4F8] via-[#F0F9FF] to-[#91C8E4]/20 flex items-center justify-center">
@@ -315,12 +424,97 @@ export default function HomePage() {
               </div>
 
               <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
-                <button className="relative p-2 sm:p-3 hover:bg-[#91C8E4]/10 rounded-full transition-all duration-200 hover:shadow-md">
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#4682A9]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  <span className="absolute top-1 right-1 sm:top-2 sm:right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                </button>
+                {/* Notification Bell */}
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative p-2 sm:p-3 hover:bg-[#91C8E4]/10 rounded-full transition-all duration-200 hover:shadow-md"
+                  >
+                    <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-[#4682A9]" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notifications Dropdown */}
+                  {showNotifications && (
+                    <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200/50 z-50 max-h-96 overflow-hidden">
+                      <div className="sticky top-0 bg-white p-4 border-b border-gray-100 flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-800 text-lg">Notifications</h3>
+                        <button
+                          onClick={() => setShowNotifications(false)}
+                          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                          <X className="w-5 h-5 text-gray-500" />
+                        </button>
+                      </div>
+                      
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="p-6 text-center text-gray-500">
+                            <Bell className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                            <p className="text-sm">No notifications yet</p>
+                          </div>
+                        ) : (
+                          notifications.slice(0, 10).map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                                !notification.read ? 'bg-blue-50/50' : ''
+                              }`}
+                            >
+                              <div className="flex items-start space-x-3">
+                                <div className="shrink-0 mt-1">
+                                  {getNotificationIcon(notification.type)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-gray-900 mb-1">
+                                        {notification.title}
+                                      </p>
+                                      <p className="text-sm text-gray-600 leading-relaxed">
+                                        {notification.message}
+                                      </p>
+                                      <p className="text-xs text-gray-400 mt-2">
+                                        {getTimeAgo(notification.timestamp)}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center space-x-1 ml-2">
+                                      {!notification.read && (
+                                        <button
+                                          onClick={() => markNotificationAsRead(notification.id)}
+                                          className="p-1 hover:bg-blue-100 rounded-full transition-colors"
+                                          title="Mark as read"
+                                        >
+                                          <CheckCircle className="w-4 h-4 text-blue-500" />
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => {
+                                          deleteNotification(notification.id);
+                                          setShowNotifications(false);
+                                        }}
+                                        className="p-1 hover:bg-red-100 rounded-full transition-colors"
+                                        title="Delete notification"
+                                      >
+                                        <X className="w-4 h-4 text-red-500" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+               
 
                 <button 
                   onClick={() => setShowLogoutModal(true)}
