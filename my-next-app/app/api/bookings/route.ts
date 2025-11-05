@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
+import { NotificationService } from '@/app/utils/notificationService';
 
 const redis = Redis.fromEnv();
 
@@ -84,6 +85,16 @@ export async function POST(req: Request) {
 
     bookings.push(booking);
     await redis.set('bookings', bookings);
+
+    // Send notification to doctor about new appointment
+    if (booking.doctorId && booking.patientName) {
+      try {
+        await NotificationService.notifyDoctorOfNewAppointment(booking.doctorId, booking);
+      } catch (notificationError) {
+        console.error('Error sending notification to doctor:', notificationError);
+        // Don't fail the booking if notification fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

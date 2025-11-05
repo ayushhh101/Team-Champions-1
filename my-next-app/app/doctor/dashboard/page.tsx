@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Calendar, Clock, Users, TrendingUp, Bell, ChevronRight, Star, LogOut, MapPin, X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
+import { ReminderScheduler } from '@/app/utils/reminderScheduler';
 
 interface Doctor {
   id: string;
@@ -116,20 +117,19 @@ export default function DoctorDashboard() {
         setAppointments([]);
       }
 
-      // Generate sample notifications (keep your existing code)
-      const sampleNotifications: Notification[] = [
-        {
-          id: '1',
-          type: 'info',
-          title: 'New Appointment',
-          message: 'John Doe has booked an appointment for tomorrow at 10:00 AM',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-          read: false
-        },
-        // ... rest of your notifications
-      ];
-      
-      setNotifications(sampleNotifications);
+      // Fetch real notifications for the doctor
+      try {
+        const notificationsResponse = await fetch(`/api/notifications?recipientId=${doctorId}&recipientType=doctor`);
+        if (notificationsResponse.ok) {
+          const notificationsData = await notificationsResponse.json();
+          if (notificationsData.success) {
+            setNotifications(notificationsData.notifications || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        setNotifications([]);
+      }
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -140,6 +140,16 @@ export default function DoctorDashboard() {
   };
 
   fetchData();
+
+  // Start the reminder scheduler for this doctor
+  if (!ReminderScheduler.isSchedulerRunning()) {
+    ReminderScheduler.start();
+  }
+
+  // Cleanup function to stop scheduler when component unmounts
+  return () => {
+    ReminderScheduler.stop();
+  };
 }, [router]);
 
 
@@ -157,16 +167,50 @@ export default function DoctorDashboard() {
     return names[0].substring(0, 2).toUpperCase();
   };
 
-  const markNotificationAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId ? { ...notif, read: true } : notif
-      )
-    );
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      const doctorId = localStorage.getItem('doctorId');
+      if (!doctorId) return;
+
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientId: doctorId,
+          recipientType: 'doctor',
+          notificationId
+        }),
+      });
+
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId ? { ...notif, read: true } : notif
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const deleteNotification = (notificationId: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      const doctorId = localStorage.getItem('doctorId');
+      if (!doctorId) return;
+
+      const response = await fetch(`/api/notifications?recipientId=${doctorId}&recipientType=doctor&notificationId=${notificationId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
   };
 
   const getNotificationIcon = (type: string) => {

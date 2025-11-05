@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, MoreVertical, X, CreditCard, XCircle } from 'lucide-react'
+import { ChevronLeft, MoreVertical, X, CreditCard, XCircle, Bell, BellOff } from 'lucide-react'
 import BottomNavigation from '../../components/BottomNavigation'
 
 interface Booking {
@@ -41,6 +41,7 @@ interface Appointment {
   paymentStatus: 'paid' | 'not_paid'
   summaryAvailable?: boolean
   price?: number
+  reminderEnabled?: boolean
 }
 
 const TABS = [
@@ -58,9 +59,12 @@ export default function AppointmentHistoryPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [cancellingAppointment, setCancellingAppointment] = useState(false)
+  const [reminders, setReminders] = useState<{ [key: string]: boolean }>({})
+  const [togglingReminder, setTogglingReminder] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAppointments()
+    fetchReminders()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -140,6 +144,63 @@ export default function AppointmentHistoryPage() {
       setAppointments([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchReminders = async () => {
+    try {
+      const userId = localStorage.getItem('userId')
+      if (!userId) return
+
+      const response = await fetch(`/api/reminders?userId=${userId}`)
+      const data = await response.json()
+
+      if (data.success) {
+        const reminderMap: { [key: string]: boolean } = {}
+        data.reminders.forEach((reminder: any) => {
+          reminderMap[reminder.appointmentId] = reminder.reminderEnabled
+        })
+        setReminders(reminderMap)
+      }
+    } catch (error) {
+      console.error('Error fetching reminders:', error)
+    }
+  }
+
+  const toggleReminder = async (appointmentId: string, currentState: boolean) => {
+    const userId = localStorage.getItem('userId')
+    if (!userId) return
+
+    setTogglingReminder(appointmentId)
+
+    try {
+      const response = await fetch('/api/reminders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          appointmentId,
+          reminderEnabled: !currentState,
+          reminderTime: 30 // 30 minutes before appointment
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setReminders(prev => ({
+          ...prev,
+          [appointmentId]: data.reminderEnabled
+        }))
+      } else {
+        console.error('Failed to toggle reminder:', data.message)
+      }
+    } catch (error) {
+      console.error('Error toggling reminder:', error)
+    } finally {
+      setTogglingReminder(null)
     }
   }
 
@@ -368,6 +429,27 @@ export default function AppointmentHistoryPage() {
                             View Profile
                           </button>
                         </Link>
+                        
+                        {/* Reminder Toggle Button */}
+                        <button
+                          onClick={() => toggleReminder(appt.id, reminders[appt.id] || false)}
+                          disabled={togglingReminder === appt.id}
+                          className={`px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm hover:shadow-md ${
+                            reminders[appt.id] 
+                              ? 'bg-green-50 hover:bg-green-100 text-green-600 border-2 border-green-200 hover:border-green-300' 
+                              : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border-2 border-gray-200 hover:border-gray-300'
+                          } ${togglingReminder === appt.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={reminders[appt.id] ? 'Disable reminder' : 'Enable reminder'}
+                        >
+                          {togglingReminder === appt.id ? (
+                            <div className="w-4 h-4 animate-spin border-2 border-current border-t-transparent rounded-full" />
+                          ) : reminders[appt.id] ? (
+                            <Bell className="w-4 h-4" />
+                          ) : (
+                            <BellOff className="w-4 h-4" />
+                          )}
+                        </button>
+
                         {appt.paymentStatus === 'not_paid' && (
                           <button
                             onClick={() => handlePaymentClick(appt)}

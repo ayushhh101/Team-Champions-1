@@ -20,7 +20,8 @@ import {
   FileText,
   Search,
   CalendarDays,
-  List
+  List,
+  Bell
 } from 'lucide-react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -261,6 +262,7 @@ export default function DoctorAppointmentsPage() {
     newDate: string;
     newTime: string;
   } | null>(null);
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const calendarRef = useRef<any>(null);
   const router = useRouter();
 
@@ -596,6 +598,44 @@ export default function DoctorAppointmentsPage() {
     }
   };
 
+  const sendReminder = async (appointmentId: string, patientEmail: string) => {
+    const doctorId = localStorage.getItem('doctorId');
+    if (!doctorId) {
+      alert('Doctor not found. Please log in again.');
+      return;
+    }
+
+    setSendingReminder(appointmentId);
+
+    try {
+      const response = await fetch('/api/reminders', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          doctorId,
+          appointmentId,
+          patientEmail,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to send reminder');
+      }
+
+      alert('Reminder sent successfully to the patient!');
+      
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      alert('Failed to send reminder. Please try again.');
+    } finally {
+      setSendingReminder(null);
+    }
+  };
+
   const handleEventClick = (clickInfo: any) => {
     const event: CalendarEvent = {
       id: clickInfo.event.id,
@@ -905,10 +945,28 @@ export default function DoctorAppointmentsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex space-x-2">
                       {appointment.status === 'confirmed' && (
-                        <button className="flex items-center space-x-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium">
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Mark Complete</span>
-                        </button>
+                        <>
+                          <button className="flex items-center space-x-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium">
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Mark Complete</span>
+                          </button>
+                          <button 
+                            onClick={() => sendReminder(appointment.id, appointment.patientEmail)}
+                            disabled={sendingReminder === appointment.id}
+                            className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                              sendingReminder === appointment.id 
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            }`}
+                          >
+                            {sendingReminder === appointment.id ? (
+                              <div className="w-4 h-4 animate-spin border-2 border-current border-t-transparent rounded-full" />
+                            ) : (
+                              <Bell className="w-4 h-4" />
+                            )}
+                            <span>{sendingReminder === appointment.id ? 'Sending...' : 'Send Reminder'}</span>
+                          </button>
+                        </>
                       )}
                       <button className="flex items-center space-x-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium">
                         <Edit3 className="w-4 h-4" />

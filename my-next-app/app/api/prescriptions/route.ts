@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
+import { NotificationService } from '@/app/utils/notificationService';
 
 const redis = Redis.fromEnv();
 
@@ -90,6 +91,26 @@ export async function POST(req: Request) {
 
     prescriptions.push(prescription);
     await redis.set('prescriptions', prescriptions);
+
+    // Find the user ID based on patient email and send notification
+    if (prescription.patientEmail && prescription.doctorName) {
+      try {
+        // Get users to find the patient's userId
+        const usersData = await redis.get('users') as any[] || [];
+        const patient = usersData.find((user: any) => user.email === prescription.patientEmail);
+        
+        if (patient && patient.id) {
+          await NotificationService.notifyUserOfPrescription(
+            patient.id,
+            prescription,
+            prescription.doctorName
+          );
+        }
+      } catch (notificationError) {
+        console.error('Error sending notification to patient:', notificationError);
+        // Don't fail the prescription creation if notification fails
+      }
+    }
 
     return NextResponse.json({
       success: true,
