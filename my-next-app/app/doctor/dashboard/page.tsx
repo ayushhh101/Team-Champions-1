@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Calendar, Clock, Users, TrendingUp, Bell, ChevronRight, Star, LogOut, MapPin, X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { Calendar, Clock, Users, TrendingUp, Bell, ChevronRight, Star, LogOut, MapPin, X, CheckCircle, AlertCircle, Info, Search, FileText, Eye, User, Pill } from 'lucide-react';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { ReminderScheduler } from '@/app/utils/reminderScheduler';
 
@@ -49,6 +49,45 @@ interface Notification {
   read: boolean;
 }
 
+interface PatientSummary {
+  patientId: string;
+  patientName: string;
+  patientEmail: string;
+  lastVisit: string;
+  totalAppointments: number;
+  recentDiagnosis?: string;
+  status: 'active' | 'inactive';
+}
+
+interface PatientHistory {
+  patientInfo: {
+    name: string;
+    email: string;
+    phone?: string;
+    totalAppointments: number;
+  };
+  appointments: Array<{
+    id: string;
+    date: string;
+    time: string;
+    type: string;
+    status: string;
+    diagnosis?: string;
+  }>;
+  prescriptions: Array<{
+    id: string;
+    date: string;
+    diagnosis: string;
+    medications: Array<{
+      name: string;
+      dosage: string;
+      frequency: string;
+      duration: string;
+    }>;
+    followUpDate?: string;
+  }>;
+}
+
 export default function DoctorDashboard() {
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -56,6 +95,16 @@ export default function DoctorDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
+  // Patient History Modal States
+  const [showPatientHistoryModal, setShowPatientHistoryModal] = useState(false);
+  const [patientSummaries, setPatientSummaries] = useState<PatientSummary[]>([]);
+  const [filteredPatients, setFilteredPatients] = useState<PatientSummary[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState<PatientHistory | null>(null);
+  const [loadingPatients, setLoadingPatients] = useState(false);
+  const [loadingPatientHistory, setLoadingPatientHistory] = useState(false);
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -238,6 +287,282 @@ export default function DoctorDashboard() {
   };
 
   const unreadCount = notifications.filter(notif => !notif.read).length;
+
+  // Patient History Functions
+  const fetchPatientSummaries = async () => {
+    try {
+      setLoadingPatients(true);
+      const doctorId = localStorage.getItem('doctorId');
+      if (!doctorId) return;
+
+      // Fetch all appointments for this doctor
+      const appointmentsResponse = await fetch(`/api/appointments?doctorId=${doctorId}`);
+      const appointmentsData = await appointmentsResponse.json();
+
+      // Also fetch bookings as they might contain more recent patient data
+      const bookingsResponse = await fetch(`/api/bookings?doctorId=${doctorId}`);
+      const bookingsData = await bookingsResponse.json();
+
+      // Combine appointments and bookings for a complete patient list
+      const allPatientInteractions = [
+        ...(appointmentsData.success ? appointmentsData.appointments : []),
+        ...(bookingsData.success ? bookingsData.bookings : [])
+      ];
+
+      if (allPatientInteractions.length > 0) {
+        // Group by patient to create summaries
+        const patientMap = new Map<string, PatientSummary>();
+        
+        allPatientInteractions.forEach((interaction: any) => {
+          // Use email as primary identifier, fallback to phone or patientId
+          const patientKey = interaction.patientEmail || interaction.patientPhone || interaction.patientId;
+          const patientEmail = interaction.patientEmail || '';
+          const patientName = interaction.patientName || 'Unknown Patient';
+          
+          if (!patientKey) return; // Skip if no identifier
+          
+          if (patientMap.has(patientKey)) {
+            const existing = patientMap.get(patientKey)!;
+            existing.totalAppointments++;
+            
+            // Update last visit if this interaction is more recent
+            const interactionDate = interaction.date || interaction.createdAt;
+            if (interactionDate && new Date(interactionDate) > new Date(existing.lastVisit)) {
+              existing.lastVisit = interactionDate;
+              // Update patient name if it's more specific
+              if (patientName !== 'Unknown Patient') {
+                existing.patientName = patientName;
+              }
+              // Update email if we found one
+              if (interaction.patientEmail && !existing.patientEmail) {
+                existing.patientEmail = interaction.patientEmail;
+              }
+            }
+          } else {
+            patientMap.set(patientKey, {
+              patientId: interaction.patientId || patientKey,
+              patientName,
+              patientEmail,
+              lastVisit: interaction.date || interaction.createdAt || new Date().toISOString(),
+              totalAppointments: 1,
+              status: 'active'
+            });
+          }
+        });
+
+        // Fetch recent prescriptions to add diagnosis info
+        const prescriptionsResponse = await fetch(`/api/prescriptions?doctorId=${doctorId}`);
+        const prescriptionsData = await prescriptionsResponse.json();
+
+        if (prescriptionsData.success && prescriptionsData.prescriptions) {
+          prescriptionsData.prescriptions.forEach((presc: any) => {
+            const patientKey = presc.patientEmail || presc.patientPhone;
+            if (patientKey && patientMap.has(patientKey) && presc.diagnosis) {
+              const patient = patientMap.get(patientKey)!;
+              // Only set if not already set (to keep most recent)
+              if (!patient.recentDiagnosis) {
+                patient.recentDiagnosis = presc.diagnosis;
+              }
+            }
+          });
+        }
+
+        // Convert to array and sort by last visit (most recent first)
+        const summaries = Array.from(patientMap.values())
+          .filter(patient => patient.patientEmail || patient.patientName !== 'Unknown Patient') // Filter out incomplete records
+          .sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime());
+        
+        setPatientSummaries(summaries);
+        setFilteredPatients(summaries);
+      } else {
+        setPatientSummaries([]);
+        setFilteredPatients([]);
+      }
+    } catch (error) {
+      console.error('Error fetching patient summaries:', error);
+      setPatientSummaries([]);
+      setFilteredPatients([]);
+    } finally {
+      setLoadingPatients(false);
+    }
+  };
+
+  const fetchPatientHistory = async (patientEmail: string) => {
+    try {
+      setLoadingPatientHistory(true);
+      const doctorId = localStorage.getItem('doctorId');
+      if (!doctorId) return;
+
+      // Fetch patient appointments using multiple API endpoints for comprehensive data
+      const [appointmentsResponse, bookingsResponse, prescriptionsResponse] = await Promise.all([
+        fetch(`/api/appointments?doctorId=${doctorId}`),
+        fetch(`/api/bookings?doctorId=${doctorId}`),
+        fetch(`/api/prescriptions?doctorId=${doctorId}&patientEmail=${encodeURIComponent(patientEmail)}`)
+      ]);
+
+      const [appointmentsData, bookingsData, prescriptionsData] = await Promise.all([
+        appointmentsResponse.json(),
+        bookingsResponse.json(),
+        prescriptionsResponse.json()
+      ]);
+
+      // Filter appointments and bookings for this specific patient
+      const patientAppointments = appointmentsData.success ? 
+        appointmentsData.appointments.filter((apt: any) => 
+          apt.patientEmail === patientEmail || 
+          apt.patientPhone === patientEmail // In case email is stored as phone
+        ) : [];
+
+      const patientBookings = bookingsData.success ? 
+        bookingsData.bookings.filter((booking: any) => 
+          booking.patientEmail === patientEmail || 
+          booking.patientPhone === patientEmail
+        ) : [];
+
+      // Combine and deduplicate appointments and bookings
+      const allPatientInteractions = [...patientAppointments, ...patientBookings];
+      
+      // Remove duplicates based on date, time, and patient email
+      const uniqueInteractions = allPatientInteractions.filter((interaction, index, self) => 
+        index === self.findIndex(t => 
+          t.date === interaction.date && 
+          t.time === interaction.time && 
+          (t.patientEmail === interaction.patientEmail || t.patientPhone === interaction.patientPhone)
+        )
+      );
+
+      if (uniqueInteractions.length > 0 || prescriptionsData.success) {
+        // Get patient info from the most recent interaction
+        const recentInteraction = uniqueInteractions.sort((a: any, b: any) => 
+          new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()
+        )[0];
+
+        const patientInfo = {
+          name: recentInteraction?.patientName || patientEmail.split('@')[0] || 'Unknown Patient',
+          email: patientEmail,
+          phone: recentInteraction?.patientPhone || undefined,
+          totalAppointments: uniqueInteractions.length
+        };
+
+        // Map appointments with proper structure
+        const appointments = uniqueInteractions
+          .sort((a: any, b: any) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime())
+          .map((interaction: any) => ({
+            id: interaction.id,
+            date: interaction.date || interaction.createdAt,
+            time: interaction.time || 'N/A',
+            type: interaction.type || interaction.appointmentType || 'Consultation',
+            status: interaction.status || 'completed'
+          }));
+
+        // Map prescriptions with proper structure
+        const prescriptions = prescriptionsData.success && prescriptionsData.prescriptions ? 
+          prescriptionsData.prescriptions
+            .sort((a: any, b: any) => new Date(b.prescribedAt).getTime() - new Date(a.prescribedAt).getTime())
+            .map((presc: any) => ({
+              id: presc.id,
+              date: presc.prescribedAt,
+              diagnosis: presc.diagnosis || 'No diagnosis provided',
+              medications: presc.medications || [],
+              followUpDate: presc.followUpDate
+            })) : [];
+
+        setSelectedPatient({
+          patientInfo,
+          appointments,
+          prescriptions
+        });
+      } else {
+        // If no data found, still show patient with empty history
+        setSelectedPatient({
+          patientInfo: {
+            name: patientEmail.split('@')[0] || 'Unknown Patient',
+            email: patientEmail,
+            phone: undefined,
+            totalAppointments: 0
+          },
+          appointments: [],
+          prescriptions: []
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching patient history:', error);
+      // Show error state or empty patient
+      setSelectedPatient({
+        patientInfo: {
+          name: patientEmail.split('@')[0] || 'Unknown Patient',
+          email: patientEmail,
+          phone: undefined,
+          totalAppointments: 0
+        },
+        appointments: [],
+        prescriptions: []
+      });
+    } finally {
+      setLoadingPatientHistory(false);
+    }
+  };
+
+  const handlePatientSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setFilteredPatients(patientSummaries);
+    } else {
+      const lowercaseQuery = query.toLowerCase();
+      const filtered = patientSummaries.filter(patient =>
+        patient.patientName.toLowerCase().includes(lowercaseQuery) ||
+        patient.patientEmail.toLowerCase().includes(lowercaseQuery) ||
+        (patient.recentDiagnosis && patient.recentDiagnosis.toLowerCase().includes(lowercaseQuery)) ||
+        patient.patientId.toLowerCase().includes(lowercaseQuery)
+      );
+      setFilteredPatients(filtered);
+    }
+  };
+
+  const openPatientHistoryModal = () => {
+    setShowPatientHistoryModal(true);
+    setSelectedPatient(null);
+    setSearchQuery('');
+    fetchPatientSummaries();
+  };
+
+  const closePatientHistoryModal = () => {
+    setShowPatientHistoryModal(false);
+    setSelectedPatient(null);
+    setSearchQuery('');
+    setPatientSummaries([]);
+    setFilteredPatients([]);
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getTimeSince = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diffInDays === 0) return 'Today';
+      if (diffInDays === 1) return 'Yesterday';
+      if (diffInDays < 7) return `${diffInDays} days ago`;
+      if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+      if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
+      return `${Math.floor(diffInDays / 365)} years ago`;
+    } catch {
+      return 'Unknown';
+    }
+  };
 
   const stats = {
   todayAppointments: appointments.length, 
@@ -625,18 +950,18 @@ export default function DoctorDashboard() {
               <ChevronRight className="w-5 h-5 text-[#4682A9] group-hover:text-white transition-all" />
             </Link>
 
-            <Link
-              href="/doctor/patients"
-              className="flex items-center justify-between p-3 bg-white/50 hover:bg-linear-to-r hover:from-[#749BC2] hover:to-[#4682A9] rounded-xl transition-all group border border-[#91C8E4]/30 hover:border-[#749BC2] shadow-md hover:shadow-lg"
+            <button
+              onClick={openPatientHistoryModal}
+              className="flex items-center justify-between p-3 bg-white/50 hover:bg-linear-to-r hover:from-[#749BC2] hover:to-[#4682A9] rounded-xl transition-all group border border-[#91C8E4]/30 hover:border-[#749BC2] shadow-md hover:shadow-lg w-full"
             >
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-[#749BC2] group-hover:bg-white/90 rounded-xl flex items-center justify-center transition-all">
                   <Users className="w-5 h-5 text-white group-hover:text-[#4682A9] transition-all" />
                 </div>
-                <span className="font-medium text-[#2C5F7C] group-hover:text-white text-sm transition-all">View Patients</span>
+                <span className="font-medium text-[#2C5F7C] group-hover:text-white text-sm transition-all">Patient History</span>
               </div>
               <ChevronRight className="w-5 h-5 text-[#4682A9] group-hover:text-white transition-all" />
-            </Link>
+            </button>
 
             <Link
               href="/doctor/profile"
@@ -658,6 +983,256 @@ export default function DoctorDashboard() {
       </div>
     </div>
   </main>
+
+  {/* Patient History Modal */}
+  {showPatientHistoryModal && (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden transform transition-all border border-[#91C8E4]/20">
+        {/* Modal Header */}
+        <div className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <Users className="w-6 h-6" />
+            {selectedPatient ? selectedPatient.patientInfo.name : 'Patient History'}
+          </h2>
+          <button
+            onClick={closePatientHistoryModal}
+            className="p-2 hover:bg-white/10 rounded-full transition-all"
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="flex h-[calc(90vh-80px)]">
+          {!selectedPatient ? (
+            /* Patient List View */
+            <div className="w-full p-6 overflow-y-auto">
+              {/* Search Bar */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#4682A9]" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, or diagnosis..."
+                    value={searchQuery}
+                    onChange={(e) => handlePatientSearch(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-xl border-2 border-gray-200 focus:border-[#91C8E4] focus:outline-none text-[#4682A9] placeholder-[#4682A9]/50"
+                  />
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''} found
+                </p>
+              </div>
+
+              {/* Patient List */}
+              {loadingPatients ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="w-12 h-12 border-4 border-[#91C8E4] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : filteredPatients.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64">
+                  <Users className="w-16 h-16 text-gray-300 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">No patients found</h3>
+                  <p className="text-gray-500 text-center">
+                    {searchQuery ? 'Try adjusting your search query' : 'No patient history available yet'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredPatients.map((patient) => (
+                    <div
+                      key={patient.patientId}
+                      onClick={() => fetchPatientHistory(patient.patientEmail)}
+                      className="bg-gray-50 hover:bg-[#91C8E4]/10 rounded-xl p-4 border border-gray-200 hover:border-[#91C8E4]/50 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-[#91C8E4] rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-[#2C5F7C] group-hover:text-[#4682A9] transition-colors">
+                                {patient.patientName}
+                              </h3>
+                              <p className="text-sm text-gray-600">{patient.patientEmail}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              Last visit: {getTimeSince(patient.lastVisit)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {patient.totalAppointments} appointment{patient.totalAppointments !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          {patient.recentDiagnosis && (
+                            <div className="mt-2">
+                              <span className="inline-block px-3 py-1 bg-[#749BC2]/10 text-[#4682A9] text-xs font-medium rounded-full">
+                                Recent: {patient.recentDiagnosis}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-[#4682A9] group-hover:text-[#749BC2] transition-colors" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Patient Detail View */
+            <div className="w-full overflow-y-auto">
+              {loadingPatientHistory ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="w-12 h-12 border-4 border-[#91C8E4] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                <div className="p-6 space-y-6">
+                  {/* Back Button & View Full History */}
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setSelectedPatient(null)}
+                      className="flex items-center gap-2 text-[#4682A9] hover:text-[#749BC2] transition-colors font-medium"
+                    >
+                      <ChevronRight className="w-4 h-4 rotate-180" />
+                      Back to Patient List
+                    </button>
+                    <Link
+                      href={`/doctor/patient-history?email=${encodeURIComponent(selectedPatient.patientInfo.email)}`}
+                      className="px-4 py-2 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white rounded-lg font-semibold text-sm transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                      onClick={closePatientHistoryModal}
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Full History
+                    </Link>
+                  </div>
+
+                  {/* Patient Info */}
+                  <div className="bg-[#91C8E4]/10 rounded-xl p-4 border border-[#91C8E4]/20">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-[#91C8E4] rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-[#2C5F7C]">{selectedPatient.patientInfo.name}</h3>
+                        <p className="text-[#4682A9]">{selectedPatient.patientInfo.email}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Total Appointments:</span>
+                        <span className="ml-2 font-semibold text-[#4682A9]">{selectedPatient.patientInfo.totalAppointments}</span>
+                      </div>
+                      {selectedPatient.patientInfo.phone && (
+                        <div>
+                          <span className="text-gray-600">Phone:</span>
+                          <span className="ml-2 font-semibold text-[#4682A9]">{selectedPatient.patientInfo.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Appointments History */}
+                  <div>
+                    <h4 className="text-lg font-bold text-[#2C5F7C] mb-4 flex items-center gap-2">
+                      <Calendar className="w-5 h-5" />
+                      Appointment History
+                    </h4>
+                    {selectedPatient.appointments.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No appointments found</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedPatient.appointments.map((appointment) => (
+                          <div
+                            key={appointment.id}
+                            className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold text-[#2C5F7C]">
+                                  {formatDate(appointment.date)} at {appointment.time}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  Type: {appointment.type}
+                                </div>
+                              </div>
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                appointment.status === 'completed' ? 'bg-green-50 text-green-600' :
+                                appointment.status === 'upcoming' ? 'bg-blue-50 text-blue-600' :
+                                'bg-red-50 text-red-600'
+                              }`}>
+                                {appointment.status.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Prescriptions History */}
+                  <div>
+                    <h4 className="text-lg font-bold text-[#2C5F7C] mb-4 flex items-center gap-2">
+                      <Pill className="w-5 h-5" />
+                      Prescription History
+                    </h4>
+                    {selectedPatient.prescriptions.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No prescriptions found</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {selectedPatient.prescriptions.map((prescription) => (
+                          <div
+                            key={prescription.id}
+                            className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <div className="font-semibold text-[#2C5F7C] mb-1">
+                                  {prescription.diagnosis}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Prescribed on {formatDate(prescription.date)}
+                                </div>
+                              </div>
+                              {prescription.followUpDate && (
+                                <span className="bg-[#749BC2]/10 text-[#4682A9] px-3 py-1 rounded-full text-xs font-medium">
+                                  Follow-up: {formatDate(prescription.followUpDate)}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Medications */}
+                            <div className="space-y-2">
+                              <h5 className="font-medium text-[#4682A9] text-sm">Medications:</h5>
+                              {prescription.medications.map((med) => (
+                                <div
+                                  key={med.name}
+                                  className="bg-gray-50 rounded-lg p-3 border border-gray-200"
+                                >
+                                  <div className="font-medium text-gray-800">{med.name}</div>
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    {med.dosage} - {med.frequency} for {med.duration}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )}
 
   {/* Enhanced Logout Modal */}
   {showLogoutModal && (

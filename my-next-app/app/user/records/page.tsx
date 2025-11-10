@@ -5,13 +5,13 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, Download, Eye, FileText, Image as ImageIcon, File, Search, Filter, Calendar, User, X, Pill, AlertCircle, Clock, MapPin } from 'lucide-react'
+import { ChevronLeft, Download, Eye, FileText, Image as ImageIcon, File, Search, Filter, Calendar, User, X, Pill, AlertCircle, Clock, MapPin, Bell, Check } from 'lucide-react'
 import BottomNavigation from '../../components/BottomNavigation'
 
 interface MedicalRecord {
   id: string
   title: string
-  type: 'prescription' | 'lab_report' | 'scan' | 'discharge_summary' | 'other'
+  type: 'prescription' | 'appointment' | 'lab_report' | 'scan' | 'discharge_summary' | 'other'
   date: string
   doctorName: string
   doctorSpeciality: string
@@ -20,6 +20,8 @@ interface MedicalRecord {
   fileSize?: string
   notes?: string
   downloadUrl?: string
+  appointmentTime?: string
+  status?: string
 }
 
 interface Prescription {
@@ -39,20 +41,40 @@ interface Prescription {
   additionalNotes?: string
 }
 
+interface FollowUpAppointment {
+  id: string
+  originalAppointmentId: string
+  doctorName: string
+  doctorSpeciality: string
+  scheduledDate: string
+  status: 'scheduled' | 'completed' | 'overdue'
+  reason: string
+  notes?: string
+  prescriptionId?: string
+}
+
 const RECORD_TYPES = [
   { value: 'all', label: 'All Records', icon: FileText },
+  { value: 'appointment', label: 'Appointments', icon: Calendar },
   { value: 'prescription', label: 'Prescriptions', icon: Pill },
-  { value: 'lab_report', label: 'Lab Reports', icon: FileText },
-  { value: 'scan', label: 'Scans', icon: ImageIcon },
-  { value: 'discharge_summary', label: 'Summaries', icon: FileText },
+]
+
+const MAIN_TABS = [
+  { value: 'records', label: 'Medical Records' },
+  { value: 'followups', label: 'Follow-ups' },
 ]
 
 export default function MedicalRecordsPage() {
+  const [activeTab, setActiveTab] = useState<'records' | 'followups'>('records')
   const [records, setRecords] = useState<MedicalRecord[]>([])
+  const [followUps, setFollowUps] = useState<FollowUpAppointment[]>([])
   const [filteredRecords, setFilteredRecords] = useState<MedicalRecord[]>([])
+  const [filteredFollowUps, setFilteredFollowUps] = useState<FollowUpAppointment[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('all')
+  const [selectedDoctor, setSelectedDoctor] = useState('all')
+  const [availableDoctors, setAvailableDoctors] = useState<Array<{name: string, speciality: string}>>([])
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [dateFilter, setDateFilter] = useState<'all' | '30days' | '6months' | '1year'>('all')
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
@@ -60,11 +82,16 @@ export default function MedicalRecordsPage() {
 
   useEffect(() => {
     fetchMedicalRecords()
+    fetchFollowUps()
   }, [])
 
   useEffect(() => {
-    filterRecords()
-  }, [searchQuery, selectedType, dateFilter, records])
+    if (activeTab === 'records') {
+      filterRecords()
+    } else {
+      filterFollowUps()
+    }
+  }, [searchQuery, selectedType, selectedDoctor, dateFilter, records, followUps, activeTab])
 
   const fetchMedicalRecords = async () => {
     try {
@@ -76,27 +103,157 @@ export default function MedicalRecordsPage() {
         return
       }
 
-      const response = await fetch(`/api/medical-records?patientEmail=${encodeURIComponent(userEmail)}`)
+      // Fetch medical records (prescriptions)
+      const recordsResponse = await fetch(`/api/medical-records?patientEmail=${encodeURIComponent(userEmail)}`)
+      
+      // Fetch all appointments and filter client-side since API doesn't support patientEmail filtering
+      const appointmentsResponse = await fetch(`/api/appointments`)
+      
+      // Fetch bookings with patientEmail filter (this API supports it)
+      const bookingsResponse = await fetch(`/api/bookings?patientEmail=${encodeURIComponent(userEmail)}`)
 
+      const [recordsData, appointmentsData, bookingsData] = await Promise.all([
+        recordsResponse.ok ? recordsResponse.json() : { success: false },
+        appointmentsResponse.ok ? appointmentsResponse.json() : { success: false },
+        bookingsResponse.ok ? bookingsResponse.json() : { success: false }
+      ])
+
+      let allRecords: MedicalRecord[] = []
+      const doctorSet = new Set<string>()
+
+      // Add medical records (prescriptions)
+      if (recordsData.success && Array.isArray(recordsData.records)) {
+        allRecords = [...allRecords, ...recordsData.records]
+        recordsData.records.forEach((record: MedicalRecord) => {
+          if (record.doctorName) {
+            doctorSet.add(JSON.stringify({ name: record.doctorName, speciality: record.doctorSpeciality || '' }))
+          }
+        })
+      }
+
+      // Filter appointments by patientEmail client-side and add as records
+      if (appointmentsData.success && Array.isArray(appointmentsData.appointments)) {
+        const userAppointments = appointmentsData.appointments.filter((apt: any) => 
+          apt.patientEmail === userEmail || apt.patientId === userEmail
+        )
+        
+        const appointmentRecords = userAppointments.map((apt: any) => ({
+          id: apt.id,
+          title: `Appointment with ${apt.doctorName || 'Doctor'}`,
+          type: 'appointment' as const,
+          date: apt.date,
+          doctorName: apt.doctorName || 'Unknown Doctor',
+          doctorSpeciality: apt.doctorSpeciality || apt.type || 'General Medicine',
+          appointmentTime: apt.time,
+          status: apt.status,
+          notes: `Appointment Type: ${apt.type || 'Consultation'}`
+        }))
+        
+        allRecords = [...allRecords, ...appointmentRecords]
+        appointmentRecords.forEach((record: MedicalRecord) => {
+          if (record.doctorName) {
+            doctorSet.add(JSON.stringify({ name: record.doctorName, speciality: record.doctorSpeciality || '' }))
+          }
+        })
+      }
+
+      // Add bookings as appointments (these are already filtered by patientEmail)
+      if (bookingsData.success && Array.isArray(bookingsData.bookings)) {
+        const bookingRecords = bookingsData.bookings
+          .filter((booking: any) => !allRecords.some(record => 
+            record.date === booking.date && record.appointmentTime === booking.time
+          ))
+          .map((booking: any) => ({
+            id: booking.id,
+            title: `Appointment with ${booking.doctorName || 'Doctor'}`,
+            type: 'appointment' as const,
+            date: booking.date,
+            doctorName: booking.doctorName || 'Unknown Doctor',
+            doctorSpeciality: booking.doctorSpeciality || booking.type || 'General Medicine',
+            appointmentTime: booking.time,
+            status: booking.status || 'confirmed',
+            notes: `Booking Type: ${booking.type || 'Consultation'}`
+          }))
+        
+        allRecords = [...allRecords, ...bookingRecords]
+        bookingRecords.forEach((record: MedicalRecord) => {
+          if (record.doctorName) {
+            doctorSet.add(JSON.stringify({ name: record.doctorName, speciality: record.doctorSpeciality || '' }))
+          }
+        })
+      }
+
+      // Sort records by date (most recent first)
+      allRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+      // Set available doctors
+      const doctors = Array.from(doctorSet).map(doctorStr => JSON.parse(doctorStr))
+      setAvailableDoctors(doctors)
+
+      setRecords(allRecords)
+      setFilteredRecords(allRecords)
+    } catch (error) {
+      console.error('Error fetching medical records:', error)
+      setRecords([])
+      setFilteredRecords([])
+      setAvailableDoctors([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchFollowUps = async () => {
+    try {
+      const userEmail = localStorage.getItem('userEmail')
+      
+      if (!userEmail) {
+        setFollowUps([])
+        return
+      }
+
+      // Fetch prescriptions to get follow-up dates
+      const response = await fetch(`/api/prescriptions?patientEmail=${encodeURIComponent(userEmail)}`)
+      
       if (!response.ok) {
         throw new Error(`Failed to fetch: ${response.status}`)
       }
 
       const data = await response.json()
+      
+      if (data.success && Array.isArray(data.prescriptions)) {
+        // Convert prescriptions with follow-up dates to follow-up appointments
+        const followUpList: FollowUpAppointment[] = data.prescriptions
+          .filter((prescription: any) => prescription.followUpDate)
+          .map((prescription: any) => {
+            const followUpDate = new Date(prescription.followUpDate)
+            const today = new Date()
+            
+            let status: 'scheduled' | 'completed' | 'overdue' = 'scheduled'
+            if (followUpDate < today) {
+              // Check if there's a corresponding completed appointment
+              status = 'overdue' // This could be enhanced to check actual appointment status
+            }
 
-      if (data.success && Array.isArray(data.records)) {
-        setRecords(data.records)
-        setFilteredRecords(data.records)
+            return {
+              id: `followup_${prescription.id}`,
+              originalAppointmentId: prescription.appointmentId || '',
+              doctorName: prescription.doctorName,
+              doctorSpeciality: prescription.diagnosis || 'General Medicine',
+              scheduledDate: prescription.followUpDate,
+              status,
+              reason: prescription.diagnosis || 'Follow-up consultation',
+              notes: prescription.additionalNotes,
+              prescriptionId: prescription.id
+            }
+          })
+        
+        setFollowUps(followUpList)
       } else {
-        setRecords([])
-        setFilteredRecords([])
+        setFollowUps([])
       }
     } catch (error) {
-      console.error('Error fetching medical records:', error)
-      setRecords([])
-      setFilteredRecords([])
-    } finally {
-      setLoading(false)
+      console.error('Error fetching follow-ups:', error)
+      setFollowUps([])
     }
   }
 
@@ -105,6 +262,10 @@ export default function MedicalRecordsPage() {
 
     if (selectedType !== 'all') {
       filtered = filtered.filter(record => record.type === selectedType)
+    }
+
+    if (selectedDoctor !== 'all') {
+      filtered = filtered.filter(record => record.doctorName === selectedDoctor)
     }
 
     if (searchQuery) {
@@ -136,8 +297,42 @@ export default function MedicalRecordsPage() {
     setFilteredRecords(filtered)
   }
 
+  const filterFollowUps = () => {
+    let filtered = [...followUps]
+
+    if (searchQuery) {
+      filtered = filtered.filter(followUp =>
+        followUp.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        followUp.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        followUp.doctorSpeciality.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    if (dateFilter !== 'all') {
+      const now = new Date()
+      const filterDate = new Date()
+
+      if (dateFilter === '30days') {
+        filterDate.setDate(now.getDate() - 30)
+      } else if (dateFilter === '6months') {
+        filterDate.setMonth(now.getMonth() - 6)
+      } else if (dateFilter === '1year') {
+        filterDate.setFullYear(now.getFullYear() - 1)
+      }
+
+      filtered = filtered.filter(followUp => {
+        const followUpDate = new Date(followUp.scheduledDate)
+        return followUpDate >= filterDate
+      })
+    }
+
+    setFilteredFollowUps(filtered)
+  }
+
   const getRecordIcon = (type: string) => {
     switch (type) {
+      case 'appointment':
+        return <Calendar className="w-6 h-6" />
       case 'prescription':
         return <Pill className="w-6 h-6" />
       case 'lab_report':
@@ -153,6 +348,8 @@ export default function MedicalRecordsPage() {
 
   const getRecordColor = (type: string) => {
     switch (type) {
+      case 'appointment':
+        return 'bg-indigo-50 text-indigo-600 border-indigo-200'
       case 'prescription':
         return 'bg-blue-50 text-blue-600 border-blue-200'
       case 'lab_report':
@@ -164,6 +361,31 @@ export default function MedicalRecordsPage() {
       default:
         return 'bg-gray-50 text-gray-600 border-gray-200'
     }
+  }
+
+  const getFollowUpStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled':
+        return 'bg-blue-50 text-blue-600 border-blue-200'
+      case 'completed':
+        return 'bg-green-50 text-green-600 border-green-200'
+      case 'overdue':
+        return 'bg-red-50 text-red-600 border-red-200'
+      default:
+        return 'bg-gray-50 text-gray-600 border-gray-200'
+    }
+  }
+
+  const handleBookFollowUp = (followUp: FollowUpAppointment) => {
+    // Navigate to booking page for this doctor
+    const searchParams = new URLSearchParams({
+      reason: followUp.reason,
+      notes: followUp.notes || '',
+      followUpFor: followUp.prescriptionId || ''
+    })
+    
+    // This would need the doctor ID, which we might need to fetch
+    window.location.href = `/user/dashboard?${searchParams.toString()}`
   }
 
   const formatDate = (dateString: string) => {
@@ -206,6 +428,7 @@ export default function MedicalRecordsPage() {
   const handleClearFilters = () => {
     setSearchQuery('')
     setSelectedType('all')
+    setSelectedDoctor('all')
     setDateFilter('all')
   }
 
@@ -217,7 +440,7 @@ export default function MedicalRecordsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-gradient-to-r from-[#91C8E4] to-[#4682A9] backdrop-blur-md shadow-lg sticky top-0 z-40">
+      <header className="bg-linear-to-r from-[#91C8E4] to-[#4682A9] backdrop-blur-md shadow-lg sticky top-0 z-40">
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -228,12 +451,19 @@ export default function MedicalRecordsPage() {
               </Link>
               <h1 className="ml-3 text-lg sm:text-xl font-bold text-white">Medical Records</h1>
             </div>
-            <button
-              onClick={() => setShowFilterModal(true)}
-              className="p-2 hover:bg-white/10 rounded-full transition-all duration-200"
-            >
-              <Filter className="w-5 h-5 text-white" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterModal(true)}
+                className="p-2 hover:bg-white/10 rounded-full transition-all duration-200"
+              >
+                <Filter className="w-5 h-5 text-white" />
+                {(selectedType !== 'all' || selectedDoctor !== 'all' || dateFilter !== 'all') && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="text-xs text-white font-bold">!</span>
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -249,164 +479,355 @@ export default function MedicalRecordsPage() {
           </div>
         </div>
 
-        {/* Type Filter Tabs */}
-        <div className="px-4 pb-4 overflow-x-auto">
-          <div className="flex gap-2 min-w-max">
-            {RECORD_TYPES.map(type => {
-              const Icon = type.icon
-              return (
-                <button
-                  key={type.value}
-                  onClick={() => setSelectedType(type.value)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all duration-300 ${
-                    selectedType === type.value
-                      ? 'bg-white text-[#4682A9] shadow-md'
-                      : 'bg-white/10 text-white hover:bg-white/20'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {type.label}
-                </button>
-              )
-            })}
-          </div>
+        {/* Main Navigation Tabs */}
+        <div className="flex border-b border-white/20 mt-4">
+          {MAIN_TABS.map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value as 'records' | 'followups')}
+              className={`flex-1 py-3 text-center text-sm font-semibold transition-all duration-300 ${
+                activeTab === tab.value
+                  ? 'text-white border-b-3 border-white bg-white/10'
+                  : 'text-white/70 border-b-2 border-transparent hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+
+        {/* Type Filter Tabs - Only show for records */}
+        {activeTab === 'records' && (
+          <div className="px-4 pb-4 overflow-x-auto">
+            <div className="flex gap-2 min-w-max">
+              {RECORD_TYPES.map(type => {
+                const Icon = type.icon
+                return (
+                  <button
+                    key={type.value}
+                    onClick={() => setSelectedType(type.value)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all duration-300 ${
+                      selectedType === type.value
+                        ? 'bg-white text-[#4682A9] shadow-md'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {type.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Records Summary */}
+      {/* Records/Follow-ups Summary */}
       <div className="px-4 py-4 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500">Total Records</p>
-            <p className="text-2xl font-bold text-[#4682A9]">{filteredRecords.length}</p>
+            <p className="text-sm text-gray-500">
+              Total {activeTab === 'records' ? 'Records' : 'Follow-ups'}
+            </p>
+            <p className="text-2xl font-bold text-[#4682A9]">
+              {activeTab === 'records' ? filteredRecords.length : filteredFollowUps.length}
+            </p>
           </div>
           <div className="flex gap-4">
-            <div className="text-center">
-              <p className="text-xs text-gray-500">This Month</p>
-              <p className="text-lg font-bold text-[#749BC2]">
-                {filteredRecords.filter(r => {
-                  const recordDate = new Date(r.date)
-                  const now = new Date()
-                  return recordDate.getMonth() === now.getMonth() &&
-                    recordDate.getFullYear() === now.getFullYear()
-                }).length}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-gray-500">This Year</p>
-              <p className="text-lg font-bold text-[#91C8E4]">
-                {filteredRecords.filter(r => {
-                  const recordDate = new Date(r.date)
-                  const now = new Date()
-                  return recordDate.getFullYear() === now.getFullYear()
-                }).length}
-              </p>
-            </div>
+            {activeTab === 'records' ? (
+              <>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">This Month</p>
+                  <p className="text-lg font-bold text-[#749BC2]">
+                    {filteredRecords.filter(r => {
+                      const recordDate = new Date(r.date)
+                      const now = new Date()
+                      return recordDate.getMonth() === now.getMonth() &&
+                        recordDate.getFullYear() === now.getFullYear()
+                    }).length}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">This Year</p>
+                  <p className="text-lg font-bold text-[#91C8E4]">
+                    {filteredRecords.filter(r => {
+                      const recordDate = new Date(r.date)
+                      const now = new Date()
+                      return recordDate.getFullYear() === now.getFullYear()
+                    }).length}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">Overdue</p>
+                  <p className="text-lg font-bold text-red-500">
+                    {filteredFollowUps.filter(f => f.status === 'overdue').length}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">Scheduled</p>
+                  <p className="text-lg font-bold text-blue-500">
+                    {filteredFollowUps.filter(f => f.status === 'scheduled').length}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Records List */}
+      {/* Records/Follow-ups List */}
       <div className="flex-1 px-4 py-5 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-[60vh]">
             <div className="w-12 h-12 border-4 border-[#91C8E4] border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ) : filteredRecords.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[60vh]">
-            <div className="w-24 h-24 bg-[#91C8E4]/10 rounded-full flex items-center justify-center mb-6">
-              <FileText className="w-12 h-12 text-[#91C8E4]" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-700 mb-2">No Records Found</h2>
-            <p className="text-gray-500 text-center mb-8 max-w-sm">
-              {searchQuery || selectedType !== 'all' || dateFilter !== 'all'
-                ? 'Try adjusting your filters or search query'
-                : 'Your medical records will appear here after your appointments'}
-            </p>
-            {(searchQuery || selectedType !== 'all' || dateFilter !== 'all') && (
-              <button
-                onClick={handleClearFilters}
-                className="px-6 py-3 bg-[#91C8E4] hover:bg-[#749BC2] text-white font-semibold rounded-xl transition-all"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
         ) : (
-          <div className="space-y-4">
-            {filteredRecords.map(record => (
-              <div
-                key={record.id}
-                className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden hover:border-[#91C8E4]/50"
-              >
-                <div className="p-5">
-                  {/* Record Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-start flex-1">
-                      {/* Icon */}
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 shrink-0 border ${getRecordColor(record.type)}`}>
-                        {getRecordIcon(record.type)}
-                      </div>
-
-                      {/* Record Details */}
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-[#2C5F7C] mb-1">{record.title}</h3>
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-2">
-                          <span className="flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            {record.doctorName}
-                          </span>
-                          <span className="text-gray-400">•</span>
-                          <span>{record.doctorSpeciality}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="w-4 h-4 text-[#4682A9]" />
-                          <span className="text-[#4682A9] font-medium">{formatDate(record.date)}</span>
-                          {record.fileSize && (
-                            <>
-                              <span className="text-gray-400">•</span>
-                              <span className="text-gray-500">{record.fileSize}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
+          <>
+            {/* Records Tab */}
+            {activeTab === 'records' && (
+              <>
+                {filteredRecords.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[60vh]">
+                    <div className="w-24 h-24 bg-[#91C8E4]/10 rounded-full flex items-center justify-center mb-6">
+                      <FileText className="w-12 h-12 text-[#91C8E4]" />
                     </div>
-
-                    {/* Record Type Badge */}
-                    <div className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap border ${getRecordColor(record.type)}`}>
-                      {record.type.replace(/_/g, ' ').toUpperCase()}
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  {record.notes && (
-                    <div className="bg-[#FFFBDE] rounded-lg p-3 mb-4 border border-[#91C8E4]/20">
-                      <p className="text-sm text-[#4682A9] line-clamp-2">{record.notes}</p>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleViewDetails(record)}
-                      className="flex-1 px-4 py-3 bg-gradient-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white rounded-xl font-semibold text-sm transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 transform hover:scale-[1.02]"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View Details
-                    </button>
-                    {record.downloadUrl && (
+                    <h2 className="text-xl font-bold text-gray-700 mb-2">No Records Found</h2>
+                    <p className="text-gray-500 text-center mb-8 max-w-sm">
+                      {searchQuery || selectedType !== 'all' || selectedDoctor !== 'all' || dateFilter !== 'all'
+                        ? 'Try adjusting your filters or search query'
+                        : 'Your medical records will appear here after your appointments'}
+                    </p>
+                    {(searchQuery || selectedType !== 'all' || selectedDoctor !== 'all' || dateFilter !== 'all') && (
                       <button
-                        onClick={() => handleDownload(record)}
-                        className="px-4 py-3 bg-[#91C8E4]/10 hover:bg-[#91C8E4]/20 text-[#4682A9] rounded-xl font-semibold text-sm border-2 border-[#91C8E4]/30 hover:border-[#91C8E4]/50 transition-all duration-300 flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                        onClick={handleClearFilters}
+                        className="px-6 py-3 bg-[#91C8E4] hover:bg-[#749BC2] text-white font-semibold rounded-xl transition-all"
                       >
-                        <Download className="w-4 h-4" />
+                        Clear Filters
                       </button>
                     )}
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredRecords.map(record => (
+                      <div
+                        key={record.id}
+                        className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden hover:border-[#91C8E4]/50"
+                      >
+                        <div className="p-5">
+                          {/* Record Header */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-start flex-1">
+                              {/* Icon */}
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mr-4 shrink-0 border ${getRecordColor(record.type)}`}>
+                                {getRecordIcon(record.type)}
+                              </div>
+
+                              {/* Record Details */}
+                              <div className="flex-1">
+                                <h3 className="text-lg font-bold text-[#2C5F7C] mb-1">{record.title}</h3>
+                                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-2">
+                                  <span className="flex items-center gap-1">
+                                    <User className="w-4 h-4" />
+                                    {record.doctorName}
+                                  </span>
+                                  <span className="text-gray-400">•</span>
+                                  <span>{record.doctorSpeciality}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Calendar className="w-4 h-4 text-[#4682A9]" />
+                                  <span className="text-[#4682A9] font-medium">{formatDate(record.date)}</span>
+                                  {record.type === 'appointment' && record.appointmentTime && (
+                                    <>
+                                      <span className="text-gray-400">•</span>
+                                      <Clock className="w-4 h-4 text-[#4682A9]" />
+                                      <span className="text-[#4682A9] font-medium">{record.appointmentTime}</span>
+                                    </>
+                                  )}
+                                  {record.fileSize && (
+                                    <>
+                                      <span className="text-gray-400">•</span>
+                                      <span className="text-gray-500">{record.fileSize}</span>
+                                    </>
+                                  )}
+                                  {record.type === 'appointment' && record.status && (
+                                    <>
+                                      <span className="text-gray-400">•</span>
+                                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                        record.status === 'completed' ? 'bg-green-50 text-green-600' :
+                                        record.status === 'upcoming' ? 'bg-blue-50 text-blue-600' :
+                                        record.status === 'cancelled' ? 'bg-red-50 text-red-600' :
+                                        'bg-gray-50 text-gray-600'
+                                      }`}>
+                                        {record.status}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Record Type Badge */}
+                            <div className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap border ${getRecordColor(record.type)}`}>
+                              {record.type.replace(/_/g, ' ').toUpperCase()}
+                            </div>
+                          </div>
+
+                          {/* Notes */}
+                          {record.notes && (
+                            <div className="bg-[#FFFBDE] rounded-lg p-3 mb-4 border border-[#91C8E4]/20">
+                              <p className="text-sm text-[#4682A9] line-clamp-2">{record.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleViewDetails(record)}
+                              className="flex-1 px-4 py-3 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white rounded-xl font-semibold text-sm transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 transform hover:scale-[1.02]"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View Details
+                            </button>
+                            {record.downloadUrl && (
+                              <button
+                                onClick={() => handleDownload(record)}
+                                className="px-4 py-3 bg-[#91C8E4]/10 hover:bg-[#91C8E4]/20 text-[#4682A9] rounded-xl font-semibold text-sm border-2 border-[#91C8E4]/30 hover:border-[#91C8E4]/50 transition-all duration-300 flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Follow-ups Tab */}
+            {activeTab === 'followups' && (
+              <>
+                {filteredFollowUps.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[60vh]">
+                    <div className="w-24 h-24 bg-[#91C8E4]/10 rounded-full flex items-center justify-center mb-6">
+                      <Clock className="w-12 h-12 text-[#91C8E4]" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-700 mb-2">No Follow-ups Found</h2>
+                    <p className="text-gray-500 text-center mb-8 max-w-sm">
+                      {searchQuery || dateFilter !== 'all'
+                        ? 'Try adjusting your filters or search query'
+                        : 'Follow-up appointments from your prescriptions will appear here'}
+                    </p>
+                    {(searchQuery || dateFilter !== 'all') && (
+                      <button
+                        onClick={handleClearFilters}
+                        className="px-6 py-3 bg-[#91C8E4] hover:bg-[#749BC2] text-white font-semibold rounded-xl transition-all"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredFollowUps.map(followUp => (
+                      <div
+                        key={followUp.id}
+                        className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
+                      >
+                        <div className="p-5">
+                          {/* Doctor and Status */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <h3 className="font-bold text-lg text-gray-900 mb-1">
+                                {followUp.doctorName}
+                              </h3>
+                              <p className="text-sm text-gray-600 mb-2">
+                                {followUp.doctorSpeciality}
+                              </p>
+                              <p className="text-sm font-medium text-gray-700">
+                                {followUp.reason}
+                              </p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                Follow-up: {formatDate(followUp.scheduledDate)}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getFollowUpStatusColor(followUp.status)}`}>
+                                {followUp.status === 'overdue' ? 'Overdue' : 
+                                 followUp.status === 'scheduled' ? 'Upcoming' : 'Completed'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-3 mt-4">
+                            {followUp.status !== 'completed' && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    // Mark as complete logic
+                                    console.log('Mark complete:', followUp.id)
+                                  }}
+                                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+                                >
+                                  <Check className="w-4 h-4" />
+                                  Mark Complete
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    // Text reminder logic
+                                    console.log('Send reminder for:', followUp.id)
+                                  }}
+                                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 border border-gray-300"
+                                >
+                                  <Bell className="w-4 h-4" />
+                                  Text Reminder
+                                </button>
+                              </>
+                            )}
+                            {followUp.status === 'completed' && (
+                              <div className="flex-1 px-4 py-2 bg-green-50 text-green-600 text-sm font-semibold rounded-lg flex items-center justify-center gap-2">
+                                <Check className="w-4 h-4" />
+                                Completed
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Notes if available */}
+                          {followUp.notes && (
+                            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                              <p className="text-sm text-gray-600">{followUp.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Test Reminder Notification Button */}
+                    {filteredFollowUps.length > 0 && (
+                      <div className="mt-6">
+                        <button
+                          onClick={() => {
+                            // Test notification logic
+                            console.log('Test reminder notification')
+                            alert('Test reminder notification sent!')
+                          }}
+                          className="w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-gray-300"
+                        >
+                          <Bell className="w-5 h-5" />
+                          Test Reminder Notification
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
       </div>
 
@@ -415,7 +836,7 @@ export default function MedicalRecordsPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transform transition-all">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-[#91C8E4] to-[#4682A9] px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 bg-linear-to-r from-[#91C8E4] to-[#4682A9] px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">{selectedRecord.title}</h2>
               <button
                 onClick={closeModal}
@@ -583,6 +1004,41 @@ export default function MedicalRecordsPage() {
               </button>
             </div>
 
+            {/* Doctor Filter */}
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-[#4682A9] mb-3">Filter by Doctor</p>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                <button
+                  onClick={() => setSelectedDoctor('all')}
+                  className={`w-full px-4 py-3 rounded-xl font-semibold text-sm text-left transition-all duration-300 ${
+                    selectedDoctor === 'all'
+                      ? 'bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white shadow-md'
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  All Doctors
+                </button>
+                {availableDoctors.map((doctor) => (
+                  <button
+                    key={doctor.name}
+                    onClick={() => setSelectedDoctor(doctor.name)}
+                    className={`w-full px-4 py-3 rounded-xl font-semibold text-sm text-left transition-all duration-300 ${
+                      selectedDoctor === doctor.name
+                        ? 'bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white shadow-md'
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span>{doctor.name}</span>
+                      {doctor.speciality && (
+                        <span className="text-xs opacity-70">{doctor.speciality}</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Date Filter */}
             <div className="mb-6">
               <p className="text-sm font-semibold text-[#4682A9] mb-3">Time Period</p>
@@ -595,13 +1051,10 @@ export default function MedicalRecordsPage() {
                 ].map(option => (
                   <button
                     key={option.value}
-                    onClick={() => {
-                      setDateFilter(option.value as any)
-                      setShowFilterModal(false)
-                    }}
+                    onClick={() => setDateFilter(option.value as any)}
                     className={`w-full px-4 py-3 rounded-xl font-semibold text-sm text-left transition-all duration-300 ${
                       dateFilter === option.value
-                        ? 'bg-gradient-to-r from-[#91C8E4] to-[#4682A9] text-white shadow-md'
+                        ? 'bg-linear-to-r from-[#91C8E4] to-[#4682A9] text-white shadow-md'
                         : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                     }`}
                   >
@@ -611,13 +1064,24 @@ export default function MedicalRecordsPage() {
               </div>
             </div>
 
-            {/* Apply Button */}
-            <button
-              onClick={() => setShowFilterModal(false)}
-              className="w-full px-4 py-3 bg-gradient-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              Apply Filters
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  handleClearFilters()
+                  setShowFilterModal(false)
+                }}
+                className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all duration-300"
+              >
+                Clear Filters
+              </button>
+              <button
+                onClick={() => setShowFilterModal(false)}
+                className="flex-1 px-4 py-3 bg-linear-to-r from-[#91C8E4] to-[#4682A9] hover:from-[#749BC2] hover:to-[#4682A9] text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
       )}
