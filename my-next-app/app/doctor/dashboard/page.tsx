@@ -964,6 +964,19 @@ export default function DoctorDashboard() {
             </button>
 
             <Link
+              href="/doctor/feedback"
+              className="flex items-center justify-between p-3 bg-white/50 hover:bg-linear-to-r hover:from-[#F59E0B] hover:to-[#D97706] rounded-xl transition-all group border border-[#91C8E4]/30 hover:border-[#F59E0B] shadow-md hover:shadow-lg"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-[#F59E0B] group-hover:bg-white/90 rounded-xl flex items-center justify-center transition-all">
+                  <Star className="w-5 h-5 text-white group-hover:text-[#F59E0B] transition-all" />
+                </div>
+                <span className="font-medium text-[#2C5F7C] group-hover:text-white text-sm transition-all">Patient Feedback</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[#F59E0B] group-hover:text-white transition-all" />
+            </Link>
+
+            <Link
               href="/doctor/profile"
               className="flex items-center justify-between p-3 bg-white/50 hover:bg-linear-to-r hover:from-[#4682A9] hover:to-[#749BC2] rounded-xl transition-all group border border-[#91C8E4]/30 hover:border-[#4682A9] shadow-md hover:shadow-lg"
             >

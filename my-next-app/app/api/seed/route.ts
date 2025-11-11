@@ -532,6 +532,93 @@ const seedData = {
       additionalNotes: '',
       prescribedAt: '2025-11-04T12:31:25.212Z'
     }
+  ],
+  feedbacks: [
+    {
+      id: 'feedback_app1_1731234567890',
+      appointmentId: 'app1',
+      doctorId: 'doc1',
+      doctorName: 'Dr. Rajesh Kumar',
+      patientEmail: 'admin.patient@hospital.com',
+      patientName: 'Admin Patient',
+      consultingRating: 5,
+      hospitalRating: 4,
+      waitingTimeRating: 4,
+      wouldRecommend: true,
+      additionalComments: 'Excellent consultation! Dr. Kumar was very thorough and explained everything clearly. The treatment plan was effective and I felt much better after following it.',
+      appointmentDate: '2025-11-01',
+      appointmentTime: '10:00',
+      submittedAt: '2025-11-01T11:30:00.000Z',
+      status: 'active'
+    },
+    {
+      id: 'feedback_app2_1731234567891',
+      appointmentId: 'app2',
+      doctorId: 'doc1',
+      doctorName: 'Dr. Rajesh Kumar',
+      patientEmail: 'john.smith@email.com',
+      patientName: 'John Smith',
+      consultingRating: 4,
+      hospitalRating: 5,
+      waitingTimeRating: 3,
+      wouldRecommend: true,
+      additionalComments: 'Good experience overall. The doctor was knowledgeable and helpful. Only issue was the waiting time was a bit long.',
+      appointmentDate: '2025-11-02',
+      appointmentTime: '14:00',
+      submittedAt: '2025-11-02T15:30:00.000Z',
+      status: 'active'
+    },
+    {
+      id: 'feedback_app3_1731234567892',
+      appointmentId: 'app3',
+      doctorId: 'doc2',
+      doctorName: 'Dr. Priya Sharma',
+      patientEmail: 'sarah.williams@email.com',
+      patientName: 'Sarah Williams',
+      consultingRating: 5,
+      hospitalRating: 5,
+      waitingTimeRating: 5,
+      wouldRecommend: true,
+      additionalComments: 'Outstanding service! Dr. Sharma was very caring and took time to address all my concerns. The staff was also very professional.',
+      appointmentDate: '2025-11-03',
+      appointmentTime: '09:00',
+      submittedAt: '2025-11-03T10:30:00.000Z',
+      status: 'active'
+    },
+    {
+      id: 'feedback_app4_1731234567893',
+      appointmentId: 'app4',
+      doctorId: 'doc3',
+      doctorName: 'Dr. Amit Patel',
+      patientEmail: 'admin.patient@hospital.com',
+      patientName: 'Admin Patient',
+      consultingRating: 4,
+      hospitalRating: 4,
+      waitingTimeRating: 4,
+      wouldRecommend: true,
+      additionalComments: 'Dr. Patel is great with pediatric care. My child felt comfortable during the consultation.',
+      appointmentDate: '2025-11-03',
+      appointmentTime: '15:00',
+      submittedAt: '2025-11-03T16:30:00.000Z',
+      status: 'active'
+    },
+    {
+      id: 'feedback_app5_1731234567894',
+      appointmentId: 'app5',
+      doctorId: 'doc1',
+      doctorName: 'Dr. Rajesh Kumar',
+      patientEmail: 'mike.johnson@email.com',
+      patientName: 'Mike Johnson',
+      consultingRating: 3,
+      hospitalRating: 3,
+      waitingTimeRating: 2,
+      wouldRecommend: false,
+      additionalComments: 'The consultation was okay but the waiting time was excessive. I had to wait for over an hour past my appointment time.',
+      appointmentDate: '2025-11-04',
+      appointmentTime: '11:00',
+      submittedAt: '2025-11-04T13:30:00.000Z',
+      status: 'active'
+    }
   ]
 }
 
@@ -611,6 +698,18 @@ export async function GET() {
     const medicalRecords = generateMedicalRecords(seedData)
     await redis.set('medical_records', JSON.stringify(medicalRecords))
 
+    // Seed feedback data
+    console.log('Seeding feedback data...')
+    
+    // Store individual feedback in hash
+    for (const feedback of seedData.feedbacks) {
+      await redis.hset('feedbacks', { [feedback.id]: JSON.stringify(feedback) })
+      
+      // Also add to doctor-specific feedback set
+      const doctorFeedbackKey = `doctor_feedbacks:${feedback.doctorId}`
+      await redis.sadd(doctorFeedbackKey, feedback.id)
+    }
+
     // Statistics
     const recordsByType = medicalRecords.reduce((acc: any, rec) => {
       acc[rec.type] = (acc[rec.type] || 0) + 1
@@ -619,6 +718,11 @@ export async function GET() {
 
     const recordsByPatient = medicalRecords.reduce((acc: any, rec) => {
       acc[rec.patientEmail] = (acc[rec.patientEmail] || 0) + 1
+      return acc
+    }, {})
+
+    const feedbacksByDoctor = seedData.feedbacks.reduce((acc: any, feedback) => {
+      acc[feedback.doctorName] = (acc[feedback.doctorName] || 0) + 1
       return acc
     }, {})
 
@@ -631,8 +735,10 @@ export async function GET() {
         bookings: seedData.bookings.length,
         prescriptions: seedData.prescriptions.length,
         medicalRecords: medicalRecords.length,
+        feedbacks: seedData.feedbacks.length,
         recordsByType,
-        recordsByPatient
+        recordsByPatient,
+        feedbacksByDoctor
       }
     })
   } catch (error) {
@@ -656,6 +762,13 @@ export async function DELETE() {
     await redis.del('bookings')
     await redis.del('prescriptions')
     await redis.del('medical_records')
+    await redis.del('feedbacks')
+
+    // Clear doctor-specific feedback sets
+    const doctorIds = ['doc1', 'doc2', 'doc3'] // Based on seed data
+    for (const doctorId of doctorIds) {
+      await redis.del(`doctor_feedbacks:${doctorId}`)
+    }
 
     return NextResponse.json({
       success: true,

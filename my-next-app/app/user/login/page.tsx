@@ -50,12 +50,14 @@ export default function LoginPage() {
         localStorage.setItem('loginEmailOrMobile', emailOrMobile);
         localStorage.setItem('userId', user.id);
         localStorage.setItem('userEmail', user.email || '');
+        localStorage.setItem('userName', user.name || '');
         localStorage.setItem('userMobile', user.mobile || user.phone || '');
         localStorage.setItem('userOTP', user.otp || '');
         localStorage.setItem('loginType', loginType);
 
         // Store additional doctor info if doctor login
         if (loginType === 'doctor') {
+          localStorage.setItem('doctorId', user.id);
           localStorage.setItem('doctorName', user.name || '');
           localStorage.setItem('doctorSpeciality', user.speciality || '');
           localStorage.setItem('doctorQualification', user.qualification || '');

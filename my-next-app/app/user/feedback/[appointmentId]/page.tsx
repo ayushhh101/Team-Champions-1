@@ -141,19 +141,46 @@ export default function ConsultingFeedbackPage() {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call - Frontend only, no backend storage
-      await new Promise(resolve => setTimeout(resolve, 2000));
-     
-      console.log('Feedback submitted (frontend only):', {
+      const userEmail = localStorage.getItem('userEmail');
+      const userName = localStorage.getItem('userName');
+      
+      if (!userEmail) {
+        alert('User session not found. Please log in again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const feedbackData = {
         appointmentId,
         doctorId,
         doctorName,
-        ...feedback,
-        submittedAt: new Date().toISOString()
+        patientEmail: userEmail,
+        patientName: userName || 'Unknown Patient',
+        consultingRating: feedback.consultingRating,
+        hospitalRating: feedback.hospitalRating,
+        waitingTimeRating: feedback.waitingTimeRating,
+        wouldRecommend: feedback.wouldRecommend,
+        additionalComments: feedback.additionalComments,
+        date: appointmentDate,
+        time: appointmentTime
+      };
+
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(feedbackData),
       });
 
-      alert('Thank you for your feedback!');
-      router.push('/user/appointment-history');
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Thank you for your feedback! Your review has been submitted successfully.');
+        router.push('/user/appointment-history');
+      } else {
+        throw new Error(result.error || 'Failed to submit feedback');
+      }
     } catch (error) {
       console.error('Error submitting feedback:', error);
       alert('Failed to submit feedback. Please try again.');
